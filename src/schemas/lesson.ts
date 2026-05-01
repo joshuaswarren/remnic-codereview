@@ -51,6 +51,12 @@ export const LessonSchema = z.object({
 	related_lessons: z.array(z.string()).optional(),
 	/** Optional: code examples. */
 	code_examples: z.array(z.string()).optional(),
+	/**
+	 * Hash of the source section content (file_path + heading + body).
+	 * Used for per-section dedup: re-extracting the same section maps to the
+	 * same lesson regardless of LLM non-determinism.
+	 */
+	source_hash: z.string().optional(),
 });
 
 /** Inferred TypeScript type from the Lesson schema. */

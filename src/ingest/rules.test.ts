@@ -127,11 +127,20 @@ describe("rules ingestion", () => {
 		const firstAdded = result1.added;
 		assert.ok(firstAdded >= 1);
 
-		// Second run (same args)
+		// Second run (same args) — sections are skipped by source_hash
 		const result2 = await ingestRules(opts);
 		assert.equal(result2.exitCode, 0);
 		assert.equal(result2.added, 0, "Second run should add 0 lessons");
-		assert.equal(result2.skipped, firstAdded, `Second run should skip ${firstAdded} lessons`);
+		assert.ok(result2.skipped >= 1, `Second run should skip >= 1 sections, got ${result2.skipped}`);
+
+		// Verify lesson count is unchanged
+		const adapter = await MemoryAdapter.fromConfig(makeConfig(memoryDir));
+		try {
+			const { items } = await adapter.listLessons();
+			assert.equal(items.length, firstAdded, "Total lesson count should be unchanged");
+		} finally {
+			await adapter.shutdown();
+		}
 	});
 
 	it("--dry-run prints stats but creates zero lessons in memory dir", async () => {
@@ -460,5 +469,134 @@ Gamma details about a specific pattern.
 
 		assert.equal(result.exitCode, 0);
 		assert.equal(result.added, 0, "Should add 0 lessons when no canonical files exist");
+	});
+
+	it("idempotent on re-run: dedup key is source-based, not LLM-output-based (VAL-M1-013)", async () => {
+		const { ingestRules } = await importRules();
+
+		// Create a simple fixture with one section
+		const singleDir = join(tempDir, "dedup-source-test");
+		mkdirSync(singleDir, { recursive: true });
+		writeFileSync(
+			join(singleDir, "CLAUDE.md"),
+			`# Rules\n\n## Test Rule Alpha\n\nThis is a rule about testing with enough text for extraction.\n`,
+		);
+
+		const opts: IngestRulesOptions = {
+			rulesPath: singleDir,
+			memoryDir,
+			quality: "default",
+			dryRun: false,
+		};
+
+		// First run
+		const result1 = await ingestRules(opts);
+		assert.equal(result1.exitCode, 0);
+		assert.ok(result1.added >= 1, "First run should add at least 1 lesson");
+
+		// Second run (same source content, potentially different LLM output)
+		const result2 = await ingestRules(opts);
+		assert.equal(result2.exitCode, 0);
+		assert.equal(
+			result2.added,
+			0,
+			"Second run should add 0 lessons (source-based dedup, not LLM-output-based)",
+		);
+		assert.equal(
+			result2.skipped,
+			result1.added,
+			"Second run should skip all sections from first run",
+		);
+
+		// Verify lesson count unchanged
+		const adapter = await MemoryAdapter.fromConfig(makeConfig(memoryDir));
+		try {
+			const { items } = await adapter.listLessons();
+			assert.equal(
+				items.length,
+				result1.added,
+				"Total lesson count should match first run's added count",
+			);
+
+			// Verify source_hash is stored on lessons
+			for (const lesson of items) {
+				assert.ok(lesson.source_hash, `Lesson ${lesson.id} should have source_hash set`);
+			}
+		} finally {
+			await adapter.shutdown();
+		}
+	});
+
+	it("per-section dedup: modifying one section re-extracts only that section (VAL-M1-030)", async () => {
+		const { ingestRules } = await importRules();
+
+		// Create a fixture with two sections
+		const multiDir = join(tempDir, "per-section-dedup");
+		mkdirSync(multiDir, { recursive: true });
+
+		const originalContent = `# Rules
+
+## Section Alpha
+
+Alpha content here with enough text to be considered a lesson on its own.
+
+## Section Beta
+
+Beta content here with different guidance and enough text for extraction.
+`;
+		writeFileSync(join(multiDir, "CLAUDE.md"), originalContent);
+
+		const opts: IngestRulesOptions = {
+			rulesPath: multiDir,
+			memoryDir,
+			quality: "default",
+			dryRun: false,
+		};
+
+		// First run
+		const result1 = await ingestRules(opts);
+		assert.equal(result1.exitCode, 0);
+		assert.ok(result1.added >= 2, "First run should add at least 2 lessons (one per section)");
+		const firstRunCount = result1.added;
+
+		// Modify only one section
+		const modifiedContent = `# Rules
+
+## Section Alpha
+
+Alpha content here with enough text to be considered a lesson on its own.
+
+## Section Beta
+
+MODIFIED Beta content that has been changed to test per-section dedup behavior.
+`;
+		writeFileSync(join(multiDir, "CLAUDE.md"), modifiedContent);
+
+		// Second run with modified section
+		const result2 = await ingestRules(opts);
+		assert.equal(result2.exitCode, 0);
+		assert.equal(
+			result2.added,
+			1,
+			"Second run should add exactly 1 lesson (only the modified section)",
+		);
+		assert.equal(
+			result2.skipped,
+			result1.added - 1,
+			"Second run should skip all unchanged sections",
+		);
+
+		// Verify total count is first + 1
+		const adapter = await MemoryAdapter.fromConfig(makeConfig(memoryDir));
+		try {
+			const { items } = await adapter.listLessons();
+			assert.equal(
+				items.length,
+				firstRunCount + 1,
+				"Total lessons should be original count + 1 (modified section)",
+			);
+		} finally {
+			await adapter.shutdown();
+		}
 	});
 });

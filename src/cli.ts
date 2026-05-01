@@ -190,6 +190,14 @@ export function createProgram(opts: CreateProgramOptions): Command {
 	if (opts.writeErr) program.configureOutput({ writeErr: opts.writeErr });
 	if (opts.exitOverride) program.exitOverride(opts.exitOverride);
 
+	// Suggest --help when an unknown subcommand is given (VAL-M1-004)
+	program.on("command:*", (operands) => {
+		const name = operands[0] ?? "";
+		program.error(`unknown command '${name}'. Run 'remnic-codereview --help' for usage.`, {
+			exitCode: 1,
+		});
+	});
+
 	// ─── init subcommand ──────────────────────────────────────────────────
 
 	program

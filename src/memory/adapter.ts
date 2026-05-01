@@ -114,6 +114,7 @@ export class MemoryAdapter {
 	private readonly lessonsDir: string;
 	private readonly reviewsDir: string;
 	private readonly contentHashMap: Map<string, string> = new Map();
+	private readonly sourceHashMap: Map<string, string> = new Map();
 	private readonly lessonIdToHash: Map<string, string> = new Map();
 	private closed = false;
 
@@ -137,12 +138,15 @@ export class MemoryAdapter {
 	/**
 	 * Store a lesson. Returns {id, deduped}.
 	 * Deduplicates on content hash of (summary, source_kind, source_url, tags).
+	 * Source hash is stored for per-section dedup lookups but is NOT used
+	 * for lesson-level dedup — that's handled at the section level before
+	 * the LLM call.
 	 */
 	async storeLesson(lesson: Lesson): Promise<StoreLessonResult> {
 		this.assertNotClosed();
-		const hash = contentHash(lesson);
 
-		// Check dedup
+		// Content-hash dedup (for lesson-level dedup)
+		const hash = contentHash(lesson);
 		const existingId = this.contentHashMap.get(hash);
 		if (existingId !== undefined) {
 			return { id: existingId, deduped: true };
@@ -158,11 +162,22 @@ export class MemoryAdapter {
 		const filePath = join(this.lessonsDir, `${id}.json`);
 		atomicWrite(filePath, JSON.stringify(stored, null, 2));
 
-		// Update index
+		// Update indexes
 		this.contentHashMap.set(hash, id);
 		this.lessonIdToHash.set(id, hash);
+		if (lesson.source_hash) {
+			this.sourceHashMap.set(lesson.source_hash, id);
+		}
 
 		return { id, deduped: false };
+	}
+
+	/**
+	 * Find a lesson by its source_hash. Returns the lesson ID or undefined.
+	 * Used by rules ingestion for per-section skip-before-LLM-call.
+	 */
+	findBySourceHash(sourceHash: string): string | undefined {
+		return this.sourceHashMap.get(sourceHash);
 	}
 
 	/**
@@ -356,7 +371,7 @@ export class MemoryAdapter {
 		// the EngramAccessService/Orchestrator integration would flush QMD here.
 	}
 
-	/** Load existing lesson files into the content-hash index at startup. */
+	/** Load existing lesson files into the content-hash and source-hash indexes at startup. */
 	private loadExistingIndex(): void {
 		try {
 			const files = readdirSync(this.lessonsDir).filter((f) => f.endsWith(".json"));
@@ -368,6 +383,9 @@ export class MemoryAdapter {
 					const id = parsed.lesson.id;
 					this.contentHashMap.set(hash, id);
 					this.lessonIdToHash.set(id, hash);
+					if (parsed.lesson.source_hash) {
+						this.sourceHashMap.set(parsed.lesson.source_hash, id);
+					}
 				} catch {
 					warn("Failed to index existing lesson file", { file });
 				}

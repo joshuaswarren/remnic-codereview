@@ -102,6 +102,12 @@ describe("CLI unknown subcommand", () => {
 		assert.notEqual(code, 0);
 		assert.match(stderr, /unknown command/i);
 	});
+
+	it("suggests --help in the error message (VAL-M1-004)", () => {
+		const { code, stderr } = runCli(["bogus-subcommand"]);
+		assert.notEqual(code, 0);
+		assert.match(stderr, /--help/i);
+	});
 });
 
 describe("CLI --quality validation", () => {

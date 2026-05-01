@@ -4,6 +4,7 @@
 // Reports stats (N added, M skipped) with per-file breakdown.
 // Supports --dry-run, --memory-dir, --quality presets.
 
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { QualityPreset } from "../cli.js";
@@ -90,6 +91,21 @@ const QUALITY_PRESETS: Record<string, { extraction: string; judge: string; embed
 };
 
 // ── Markdown parsing ─────────────────────────────────────────────────────────
+
+/**
+ * Compute a stable source hash from the section's source content.
+ * Based on file_path + section heading + body text, NOT the LLM output.
+ * This ensures the same section always maps to the same hash, regardless of
+ * LLM non-determinism.
+ */
+function computeSourceHash(filePath: string, heading: string, body: string): string {
+	const normalized = { filePath, heading, body };
+	const sorted = Object.keys(normalized)
+		.sort()
+		.map((k) => `${k}=${JSON.stringify((normalized as Record<string, unknown>)[k])}`)
+		.join("&");
+	return createHash("sha256").update(sorted).digest("hex").slice(0, 24);
+}
 
 /**
  * Split a markdown file into sections by ## and ### headings.
@@ -230,6 +246,21 @@ export async function ingestRules(opts: IngestRulesOptions): Promise<IngestRules
 		let fileSkipped = 0;
 
 		for (const section of sections) {
+			// Compute source hash BEFORE LLM call — based on source content,
+			// not LLM output. This makes dedup deterministic across re-runs.
+			const sectionSourceHash = computeSourceHash(fileName, section.heading, section.body);
+
+			// Per-section dedup: if a lesson with this source_hash already
+			// exists, skip the section entirely (no LLM call needed).
+			if (!dryRun && adapter) {
+				const existing = adapter.findBySourceHash(sectionSourceHash);
+				if (existing !== undefined) {
+					fileSkipped++;
+					totalSkipped++;
+					continue;
+				}
+			}
+
 			// Create an IngestSource for this section
 			const source = {
 				type: "rules_doc" as const,
@@ -243,6 +274,9 @@ export async function ingestRules(opts: IngestRulesOptions): Promise<IngestRules
 			const lessons = await extractLessons(source, config);
 
 			for (const lesson of lessons) {
+				// Stamp each lesson with the section's source_hash for dedup
+				lesson.source_hash = sectionSourceHash;
+
 				if (dryRun) {
 					totalWouldAdd++;
 					fileAdded++;
