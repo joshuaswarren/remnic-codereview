@@ -140,6 +140,11 @@ function renderDetail(lesson: Lesson): string {
  * Run the lessons list command: query stored lessons with optional filtering,
  * sorting, and pagination. Renders a table by default or JSON with --json.
  * Returns a promise — callers (CLI wrapper) should .catch() and exit non-zero.
+ *
+ * When --sort is specified, all matching lessons are fetched (no adapter-level
+ * limit), sorted globally, then sliced for the requested page. This ensures
+ * --sort + --limit produces globally-sorted results instead of sorting a
+ * pre-paginated subset.
  */
 export async function runLessonsList(opts: LessonsListOptions): Promise<void> {
 	const memoryDir = expandTilde(opts.memoryDir);
@@ -161,24 +166,49 @@ export async function runLessonsList(opts: LessonsListOptions): Promise<void> {
 				filter.still_applies = opts.filter.still_applies === "true";
 			}
 		}
-		if (opts.limit) filter.limit = opts.limit;
 		if (opts.cursor) filter.cursor = opts.cursor;
 
-		const { items, cursor } = await adapter.listLessons(filter);
-
-		// Apply sort (in-memory, since the adapter returns unsorted results)
+		// When sorting, fetch ALL matching lessons without a limit so we can
+		// sort the full set before slicing for the requested page.
 		const sortOpt = parseSortOption(opts.sort);
 		if (sortOpt) {
-			items.sort((a, b) => compareLessons(a, b, sortOpt.field, sortOpt.direction));
-		}
+			// Fetch all matching lessons (no limit at adapter level)
+			const { items } = await adapter.listLessons(filter);
 
-		if (opts.json) {
-			const output = { items, total: items.length, cursor };
-			process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
-		} else if (items.length === 0) {
-			process.stdout.write("No lessons found.\n");
+			// Apply sort to the full result set
+			items.sort((a, b) => compareLessons(a, b, sortOpt.field, sortOpt.direction));
+
+			// Slice for the requested page
+			const limit = opts.limit ?? items.length;
+			const sliced = items.slice(0, limit);
+			const hasMore = items.length > limit;
+
+			if (opts.json) {
+				const output = {
+					items: sliced,
+					total: sliced.length,
+					cursor: hasMore ? "has_more" : undefined,
+				};
+				process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+			} else if (sliced.length === 0) {
+				process.stdout.write("No lessons found.\n");
+			} else {
+				process.stdout.write(renderTable(sliced, sliced.length));
+			}
 		} else {
-			process.stdout.write(renderTable(items, items.length));
+			// No sort — use adapter-level pagination normally
+			if (opts.limit) filter.limit = opts.limit;
+
+			const { items, cursor } = await adapter.listLessons(filter);
+
+			if (opts.json) {
+				const output = { items, total: items.length, cursor };
+				process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+			} else if (items.length === 0) {
+				process.stdout.write("No lessons found.\n");
+			} else {
+				process.stdout.write(renderTable(items, items.length));
+			}
 		}
 	} finally {
 		await adapter.shutdown();

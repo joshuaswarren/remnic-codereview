@@ -27,23 +27,24 @@ export interface LoadConfigInput {
 }
 
 /** Quality presets mapping. */
-const QUALITY_PRESETS: Record<string, { extraction: string; judge: string; embed: string }> = {
-	default: {
-		extraction: "gpt-5.4-mini",
-		judge: "gpt-5.4-nano",
-		embed: "text-embedding-3-small",
-	},
-	high: {
-		extraction: "gpt-5.4-mini",
-		judge: "gpt-5.4-mini",
-		embed: "text-embedding-3-large",
-	},
-	cheap: {
-		extraction: "gpt-5.4-nano",
-		judge: "gpt-5.4-nano",
-		embed: "text-embedding-3-small",
-	},
-};
+export const QUALITY_PRESETS: Record<string, { extraction: string; judge: string; embed: string }> =
+	{
+		default: {
+			extraction: "gpt-5.4-mini",
+			judge: "gpt-5.4-nano",
+			embed: "text-embedding-3-small",
+		},
+		high: {
+			extraction: "gpt-5.4-mini",
+			judge: "gpt-5.4-mini",
+			embed: "text-embedding-3-large",
+		},
+		cheap: {
+			extraction: "gpt-5.4-nano",
+			judge: "gpt-5.4-nano",
+			embed: "text-embedding-3-small",
+		},
+	};
 
 /**
  * Load and validate configuration from defaults, config file, env vars, and CLI flags.

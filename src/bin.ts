@@ -72,7 +72,7 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 
 	if (cmd.rulesPath) {
 		const result = await ingestRules({
-			rulesPath: cmd.rulesPath,
+			rulesPath: expandTilde(cmd.rulesPath),
 			memoryDir: expandTilde(memoryDir),
 			quality: cmd.quality,
 			dryRun: cmd.dryRun,

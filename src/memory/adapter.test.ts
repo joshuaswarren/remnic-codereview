@@ -243,6 +243,103 @@ describe("MemoryAdapter", () => {
 		});
 	});
 
+	describe("listLessons with filters — cursor on filtered set", () => {
+		it("pagination cursor works correctly when filters are applied", async () => {
+			const { MemoryAdapter } = await import("./adapter.js");
+			const adapter = await MemoryAdapter.fromConfig({
+				memory_dir: memoryDir,
+				owner: "test",
+				repo: "repo",
+			});
+			try {
+				// Store 5 lessons with distinct content: 3 high severity, 2 low severity
+				await adapter.storeLesson(
+					makeLesson({ id: "les_h1", severity: "high", summary: "High lesson 1" }),
+				);
+				await adapter.storeLesson(
+					makeLesson({ id: "les_h2", severity: "high", summary: "High lesson 2" }),
+				);
+				await adapter.storeLesson(
+					makeLesson({ id: "les_h3", severity: "high", summary: "High lesson 3" }),
+				);
+				await adapter.storeLesson(
+					makeLesson({ id: "les_l1", severity: "low", summary: "Low lesson 1" }),
+				);
+				await adapter.storeLesson(
+					makeLesson({ id: "les_l2", severity: "low", summary: "Low lesson 2" }),
+				);
+
+				// Request page 1 with severity=high filter, limit 2
+				const page1 = await adapter.listLessons({ severity: "high", limit: 2 });
+				assert.equal(page1.items.length, 2, "First page should have 2 items");
+				for (const item of page1.items) {
+					assert.equal(item.severity, "high", "All items should be high severity");
+				}
+				assert.ok(page1.cursor, "Should have a cursor for next page");
+
+				// Request page 2 with same filter
+				const page2 = await adapter.listLessons({
+					severity: "high",
+					limit: 2,
+					cursor: page1.cursor,
+				});
+				assert.equal(page2.items.length, 1, "Second page should have 1 item");
+				assert.equal(page2.items[0]?.severity, "high", "Should be high severity");
+
+				// No overlap between pages
+				const page1Ids = new Set(page1.items.map((l) => l.id));
+				for (const item of page2.items) {
+					assert.equal(
+						page1Ids.has(item.id),
+						false,
+						`ID ${item.id} should not appear on both pages`,
+					);
+				}
+			} finally {
+				await adapter.shutdown();
+			}
+		});
+
+		it("cursor from unfiltered results does not overlap with filtered results", async () => {
+			const { MemoryAdapter } = await import("./adapter.js");
+			const adapter = await MemoryAdapter.fromConfig({
+				memory_dir: memoryDir,
+				owner: "test",
+				repo: "repo",
+			});
+			try {
+				await adapter.storeLesson(
+					makeLesson({ id: "les_h1", severity: "high", summary: "High lesson A" }),
+				);
+				await adapter.storeLesson(
+					makeLesson({ id: "les_l1", severity: "low", summary: "Low lesson A" }),
+				);
+				await adapter.storeLesson(
+					makeLesson({ id: "les_h2", severity: "high", summary: "High lesson B" }),
+				);
+
+				// Filter for high severity, limit 1
+				const page1 = await adapter.listLessons({ severity: "high", limit: 1 });
+				assert.equal(page1.items.length, 1);
+				assert.equal(page1.items[0]?.severity, "high");
+
+				if (page1.cursor) {
+					const page2 = await adapter.listLessons({
+						severity: "high",
+						limit: 1,
+						cursor: page1.cursor,
+					});
+					for (const item of page2.items) {
+						assert.equal(item.severity, "high", "Filtered page 2 items should match filter");
+						assert.notEqual(item.id, page1.items[0]?.id, "No overlap between pages");
+					}
+				}
+			} finally {
+				await adapter.shutdown();
+			}
+		});
+	});
+
 	describe("shutdown", () => {
 		it("completes without error", async () => {
 			const { MemoryAdapter } = await import("./adapter.js");

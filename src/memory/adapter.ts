@@ -2,7 +2,7 @@
 // One adapter per memoryDir. All methods accept explicit memoryDir via config.
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { warn } from "../log.js";
 import type { Lesson } from "../schemas/lesson.js";
@@ -95,6 +95,13 @@ function ensureDir(dir: string): void {
 	mkdirSync(dir, { recursive: true });
 }
 
+/** Atomic write: write to temp file then rename (Remnic Rule #54). */
+function atomicWrite(filePath: string, content: string): void {
+	const tmpPath = `${filePath}.tmp.${Date.now()}.${Math.random().toString(36).slice(2, 8)}`;
+	writeFileSync(tmpPath, content, "utf-8");
+	renameSync(tmpPath, filePath);
+}
+
 /**
  * MemoryAdapter — thin wrapper around @remnic/core EngramAccessService.
  *
@@ -149,7 +156,7 @@ export class MemoryAdapter {
 			content_hash: hash,
 		};
 		const filePath = join(this.lessonsDir, `${id}.json`);
-		writeFileSync(filePath, JSON.stringify(stored, null, 2), "utf-8");
+		atomicWrite(filePath, JSON.stringify(stored, null, 2));
 
 		// Update index
 		this.contentHashMap.set(hash, id);
@@ -224,6 +231,7 @@ export class MemoryAdapter {
 
 	/**
 	 * List lessons with optional filtering and pagination.
+	 * Cursor is based on the filtered set, not the full file set.
 	 */
 	async listLessons(filter?: LessonFilter): Promise<ListResult<Lesson>> {
 		this.assertNotClosed();
@@ -234,25 +242,11 @@ export class MemoryAdapter {
 			.filter((f) => f.endsWith(".json"))
 			.sort();
 
-		const lessons: Lesson[] = [];
-		let startIndex = 0;
-
-		// Decode cursor (base64 of start index)
-		if (cursor !== undefined && cursor !== "") {
+		// First pass: collect all lessons that match the filter
+		const allFiltered: Lesson[] = [];
+		for (const file of files) {
 			try {
-				startIndex = Number.parseInt(Buffer.from(cursor, "base64").toString("utf-8"), 10);
-			} catch {
-				startIndex = 0;
-			}
-		}
-
-		for (let i = startIndex; i < files.length; i++) {
-			if (lessons.length >= limit) break;
-			const fileName = files[i];
-			if (fileName === undefined) continue;
-
-			try {
-				const raw = readFileSync(join(this.lessonsDir, fileName), "utf-8");
+				const raw = readFileSync(join(this.lessonsDir, file), "utf-8");
 				const parsed = JSON.parse(raw) as StoredLesson;
 				const lesson = parsed.lesson;
 
@@ -268,17 +262,29 @@ export class MemoryAdapter {
 				if (filter?.still_applies !== undefined && lesson.still_applies !== filter.still_applies)
 					continue;
 
-				lessons.push(lesson);
+				allFiltered.push(lesson);
 			} catch {
-				warn("Failed to read lesson file", { file: files[i] });
+				warn("Failed to read lesson file", { file });
 			}
 		}
 
-		const nextIndex = startIndex + lessons.length;
-		const hasMore = nextIndex < files.length;
+		// Decode cursor (base64 of start index into the filtered set)
+		let startIndex = 0;
+		if (cursor !== undefined && cursor !== "") {
+			try {
+				startIndex = Number.parseInt(Buffer.from(cursor, "base64").toString("utf-8"), 10);
+			} catch {
+				startIndex = 0;
+			}
+		}
+
+		// Slice the filtered set for the requested page
+		const items = allFiltered.slice(startIndex, startIndex + limit);
+		const nextIndex = startIndex + items.length;
+		const hasMore = nextIndex < allFiltered.length;
 		const nextCursor = hasMore ? Buffer.from(String(nextIndex)).toString("base64") : undefined;
 
-		return { items: lessons, cursor: nextCursor };
+		return { items, cursor: nextCursor };
 	}
 
 	/**
@@ -292,7 +298,7 @@ export class MemoryAdapter {
 			stored_at: new Date().toISOString(),
 		};
 		const filePath = join(this.reviewsDir, `${id}.json`);
-		writeFileSync(filePath, JSON.stringify(stored, null, 2), "utf-8");
+		atomicWrite(filePath, JSON.stringify(stored, null, 2));
 		return { id };
 	}
 

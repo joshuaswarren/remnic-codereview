@@ -5,6 +5,7 @@
 import { existsSync, mkdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { QualityPreset } from "../cli.js";
+import { QUALITY_PRESETS } from "../config.js";
 import { expandTilde } from "../utils/expand-tilde.js";
 
 /** Options for the init command. */
@@ -16,34 +17,8 @@ export interface InitOptions {
 	quality: QualityPreset;
 }
 
-/** Quality preset model configuration. */
-interface PresetConfig {
-	extraction: string;
-	judge: string;
-	embed: string;
-}
-
-/** Quality presets mapping — same as config.ts. */
-const QUALITY_PRESETS: Record<string, PresetConfig> = {
-	default: {
-		extraction: "gpt-5.4-mini",
-		judge: "gpt-5.4-nano",
-		embed: "text-embedding-3-small",
-	},
-	high: {
-		extraction: "gpt-5.4-mini",
-		judge: "gpt-5.4-mini",
-		embed: "text-embedding-3-large",
-	},
-	cheap: {
-		extraction: "gpt-5.4-nano",
-		judge: "gpt-5.4-nano",
-		embed: "text-embedding-3-small",
-	},
-};
-
 /** Default preset as a constant for safe access. */
-const DEFAULT_PRESET: PresetConfig = QUALITY_PRESETS.default ?? {
+const DEFAULT_PRESET = QUALITY_PRESETS.default ?? {
 	extraction: "gpt-5.4-mini",
 	judge: "gpt-5.4-nano",
 	embed: "text-embedding-3-small",

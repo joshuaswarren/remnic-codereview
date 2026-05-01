@@ -415,6 +415,67 @@ describe("lessons list command", () => {
 		assert.equal(parsed.items.length, 0);
 		assert.equal(parsed.total, 0);
 	});
+
+	it("--sort + --limit produces globally-sorted results, not page-sorted", async () => {
+		const mem = tmpDir();
+		tempDirs.push(mem);
+		// Create 5 lessons with different dates
+		const lessons = [
+			makeLesson({ id: "les_jan", original_incident_date: "2026-01-15T00:00:00Z" }),
+			makeLesson({ id: "les_mar", original_incident_date: "2026-03-15T00:00:00Z" }),
+			makeLesson({ id: "les_feb", original_incident_date: "2026-02-15T00:00:00Z" }),
+			makeLesson({ id: "les_may", original_incident_date: "2026-05-15T00:00:00Z" }),
+			makeLesson({ id: "les_apr", original_incident_date: "2026-04-15T00:00:00Z" }),
+		];
+		seedLessons(mem, lessons);
+
+		// Request sort by date desc + limit 3 — should get the 3 newest globally
+		const output = await captureStdout(async () => {
+			await runLessonsList({
+				memoryDir: mem,
+				json: true,
+				sort: "original_incident_date",
+				limit: 3,
+			});
+		});
+
+		const parsed = JSON.parse(output) as { items: Lesson[]; total: number };
+		assert.equal(parsed.items.length, 3, "Should return exactly 3 items");
+		// Descending order: newest 3 globally
+		assert.equal(parsed.items[0]?.id, "les_may", "First should be the newest");
+		assert.equal(parsed.items[1]?.id, "les_apr", "Second should be the second newest");
+		assert.equal(parsed.items[2]?.id, "les_mar", "Third should be the third newest");
+		assert.equal(parsed.total, 3, "Total should reflect returned count");
+	});
+
+	it("--sort + --limit with ascending direction", async () => {
+		const mem = tmpDir();
+		tempDirs.push(mem);
+		const lessons = [
+			makeLesson({ id: "les_jan", original_incident_date: "2026-01-15T00:00:00Z" }),
+			makeLesson({ id: "les_mar", original_incident_date: "2026-03-15T00:00:00Z" }),
+			makeLesson({ id: "les_feb", original_incident_date: "2026-02-15T00:00:00Z" }),
+			makeLesson({ id: "les_may", original_incident_date: "2026-05-15T00:00:00Z" }),
+			makeLesson({ id: "les_apr", original_incident_date: "2026-04-15T00:00:00Z" }),
+		];
+		seedLessons(mem, lessons);
+
+		// Request sort by date asc + limit 3 — should get the 3 oldest globally
+		const output = await captureStdout(async () => {
+			await runLessonsList({
+				memoryDir: mem,
+				json: true,
+				sort: "original_incident_date:asc",
+				limit: 3,
+			});
+		});
+
+		const parsed = JSON.parse(output) as { items: Lesson[]; total: number };
+		assert.equal(parsed.items.length, 3, "Should return exactly 3 items");
+		assert.equal(parsed.items[0]?.id, "les_jan", "First should be the oldest");
+		assert.equal(parsed.items[1]?.id, "les_feb", "Second should be the second oldest");
+		assert.equal(parsed.items[2]?.id, "les_mar", "Third should be the third oldest");
+	});
 });
 
 // ── Show Tests ───────────────────────────────────────────────────────────────
