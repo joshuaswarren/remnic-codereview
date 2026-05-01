@@ -2,7 +2,8 @@
 // Built as dist/cli.js with a shebang for direct execution.
 
 import { readFileSync } from "node:fs";
-import { createProgram } from "./cli.js";
+import { runInit } from "./cli/init.js";
+import { createProgram, type ParsedCommand } from "./cli.js";
 
 function getVersion(): string {
 	try {
@@ -14,13 +15,32 @@ function getVersion(): string {
 	}
 }
 
+function executeCommand(cmd: ParsedCommand): void {
+	switch (cmd.command) {
+		case "init":
+			try {
+				runInit({
+					owner: cmd.owner,
+					repo: cmd.repo,
+					memoryDir: cmd.memoryDir ?? `~/.remnic-codereview/${cmd.owner}__${cmd.repo}`,
+					force: cmd.force,
+					quality: cmd.quality,
+				});
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				process.stderr.write(`Error: ${message}\n`);
+				process.exit(1);
+			}
+			break;
+		default:
+			process.stderr.write(`Subcommand "${cmd.command}" is not yet implemented.\n`);
+			process.exit(1);
+	}
+}
+
 const program = createProgram({
 	getVersion,
-	execute(_cmd) {
-		// Stub: subcommand handlers will be wired in their respective features.
-		process.stderr.write("Subcommand execution not yet implemented.\n");
-		process.exit(1);
-	},
+	execute: executeCommand,
 });
 
 program.parse();
