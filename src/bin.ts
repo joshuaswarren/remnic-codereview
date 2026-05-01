@@ -3,9 +3,9 @@
 
 import { readFileSync } from "node:fs";
 import { runInit } from "./cli/init.js";
+import { runLessonsList, runLessonsShow } from "./cli/lessons.js";
 import { createProgram, type ParsedCommand } from "./cli.js";
 import { ingestRules } from "./ingest/rules.js";
-import { MemoryAdapter } from "./memory/adapter.js";
 import { expandTilde } from "./utils/expand-tilde.js";
 
 function getVersion(): string {
@@ -107,51 +107,22 @@ async function executeLessonsList(
 	cmd: Extract<ParsedCommand, { command: "lessons-list" }>,
 ): Promise<void> {
 	const memoryDir = cmd.memoryDir ?? `~/.remnic-codereview/local__rules`;
-	const adapter = await MemoryAdapter.fromConfig({
-		memory_dir: expandTilde(memoryDir),
-		owner: "local",
-		repo: "rules",
-	});
-
-	try {
-		const filter: {
-			severity?: string;
-			source_kind?: string;
-			tags?: string[];
-			limit?: number;
-			cursor?: string;
-		} = {};
-		if (cmd.filter) {
-			if (cmd.filter.severity) filter.severity = cmd.filter.severity;
-			if (cmd.filter.source_kind) filter.source_kind = cmd.filter.source_kind;
-			if (cmd.filter.tags) filter.tags = cmd.filter.tags.split(",");
-		}
-		if (cmd.limit) filter.limit = cmd.limit;
-		if (cmd.cursor) filter.cursor = cmd.cursor;
-
-		const { items, cursor } = await adapter.listLessons(filter);
-
-		if (cmd.json) {
-			process.stdout.write(`${JSON.stringify({ items, total: items.length, cursor }, null, 2)}\n`);
-		} else if (items.length === 0) {
-			process.stdout.write("No lessons found.\n");
-		} else {
-			// Render table
-			process.stdout.write("ID                                 SEVERITY   SUMMARY\n");
-			process.stdout.write(
-				"────────────────────────────────── ────────── ────────────────────────────────────────\n",
-			);
-			for (const lesson of items) {
-				const id = lesson.id.padEnd(34);
-				const severity = lesson.severity.padEnd(10);
-				const summary = lesson.summary.slice(0, 50);
-				process.stdout.write(`${id} ${severity} ${summary}\n`);
-			}
-			process.stdout.write(`\nTotal: ${items.length} lessons\n`);
-		}
-	} finally {
-		await adapter.shutdown();
-	}
+	const opts: {
+		memoryDir: string;
+		json: boolean;
+		filter?: Record<string, string>;
+		sort?: string;
+		limit?: number;
+		cursor?: string;
+	} = {
+		memoryDir: expandTilde(memoryDir),
+		json: cmd.json ?? false,
+	};
+	if (cmd.filter) opts.filter = cmd.filter;
+	if (cmd.sort) opts.sort = cmd.sort;
+	if (cmd.limit) opts.limit = cmd.limit;
+	if (cmd.cursor) opts.cursor = cmd.cursor;
+	await runLessonsList(opts);
 }
 
 /** Execute the lessons show command (async). */
@@ -159,43 +130,11 @@ async function executeLessonsShow(
 	cmd: Extract<ParsedCommand, { command: "lessons-show" }>,
 ): Promise<void> {
 	const memoryDir = cmd.memoryDir ?? `~/.remnic-codereview/local__rules`;
-	const adapter = await MemoryAdapter.fromConfig({
-		memory_dir: expandTilde(memoryDir),
-		owner: "local",
-		repo: "rules",
+	await runLessonsShow({
+		memoryDir: expandTilde(memoryDir),
+		lessonId: cmd.lessonId,
+		json: cmd.json ?? false,
 	});
-
-	try {
-		const lesson = await adapter.getLesson(cmd.lessonId);
-		if (!lesson) {
-			process.stderr.write(`Lesson ${cmd.lessonId} not found.\n`);
-			process.exit(1);
-		}
-
-		if (cmd.json) {
-			process.stdout.write(`${JSON.stringify(lesson, null, 2)}\n`);
-		} else {
-			process.stdout.write(`ID:          ${lesson.id}\n`);
-			process.stdout.write(`Summary:     ${lesson.summary}\n`);
-			process.stdout.write(`Severity:    ${lesson.severity}\n`);
-			process.stdout.write(`Source Kind: ${lesson.source_kind}\n`);
-			process.stdout.write(`Source URL:  ${lesson.source_url}\n`);
-			process.stdout.write(`Date:        ${lesson.original_incident_date}\n`);
-			process.stdout.write(`Still Applies: ${lesson.still_applies}\n`);
-			process.stdout.write(`Tags:        ${lesson.tags.join(", ")}\n`);
-			if (lesson.pattern_keywords) {
-				process.stdout.write(`Keywords:    ${lesson.pattern_keywords.join(", ")}\n`);
-			}
-			if (lesson.what_to_check) {
-				process.stdout.write(`What to Check: ${lesson.what_to_check}\n`);
-			}
-			if (lesson.suggested_fix_template) {
-				process.stdout.write(`Suggested Fix: ${lesson.suggested_fix_template}\n`);
-			}
-		}
-	} finally {
-		await adapter.shutdown();
-	}
 }
 
 const program = createProgram({
