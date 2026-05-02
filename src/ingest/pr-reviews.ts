@@ -291,6 +291,15 @@ async function ingestOverallReviews(
 			if (!lesson.tags.includes("pr-review")) lesson.tags.push("pr-review");
 			if (!lesson.tags.includes("overall-review")) lesson.tags.push("overall-review");
 
+			// Propagate PR-review-specific metadata
+			lesson.metadata = {
+				pull_request_review_id: review.id,
+				state: review.state,
+				reviewer: { login: reviewer },
+				submitted_at: review.submitted_at,
+				html_url: review.html_url,
+			};
+
 			stats.pr_review_overall++;
 
 			if (dryRun) {
@@ -421,6 +430,32 @@ async function ingestReviewComments(
 				lesson.tags.push(comment.position === null ? "outdated" : "current");
 			}
 
+			// Propagate PR-review-specific metadata
+			lesson.metadata = {
+				comment_id: comment.id,
+				file_path: comment.path,
+				original_line: comment.original_line,
+				line: comment.line,
+				original_start_line: comment.original_start_line,
+				start_line: comment.start_line,
+				diff_hunk: comment.diff_hunk,
+				commit_id: comment.commit_id,
+				position: comment.position,
+				original_position: comment.original_position,
+				side: comment.side === "LEFT" || comment.side === "RIGHT" ? comment.side : undefined,
+				start_side:
+					comment.start_side === "LEFT" || comment.start_side === "RIGHT"
+						? comment.start_side
+						: undefined,
+				pull_request_review_id: comment.pull_request_review_id,
+				parent_comment_id: comment.in_reply_to_id,
+				reviewer: { login: reviewer },
+				created_at: comment.created_at,
+				updated_at: comment.updated_at,
+				html_url: comment.html_url,
+				is_outdated: comment.position === null,
+			};
+
 			if (isReply) {
 				stats.pr_review_reply++;
 			} else {
@@ -497,6 +532,15 @@ async function ingestIssueComments(
 			lesson.source_url = comment.html_url;
 			if (!lesson.tags.includes("pr-review")) lesson.tags.push("pr-review");
 			if (!lesson.tags.includes("discussion")) lesson.tags.push("discussion");
+
+			// Propagate PR-discussion-specific metadata
+			lesson.metadata = {
+				comment_id: comment.id,
+				body: comment.body,
+				commenter: { login: commenter },
+				created_at: comment.created_at,
+				html_url: comment.html_url,
+			};
 
 			stats.pr_discussion++;
 

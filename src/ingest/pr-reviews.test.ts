@@ -687,6 +687,16 @@ describe("pr-review ingestion", () => {
 			overallLesson.source_url,
 			"https://github.com/acme/widgets/pull/1#pullrequestreview-1001",
 		);
+		// Verify metadata fields
+		assert.ok(overallLesson.metadata, "lesson should have metadata");
+		assert.equal(overallLesson.metadata.pull_request_review_id, 1001);
+		assert.equal(overallLesson.metadata.state, "COMMENTED");
+		assert.deepEqual(overallLesson.metadata.reviewer, { login: "bob" });
+		assert.equal(overallLesson.metadata.submitted_at, "2026-03-15T09:00:00Z");
+		assert.equal(
+			overallLesson.metadata.html_url,
+			"https://github.com/acme/widgets/pull/1#pullrequestreview-1001",
+		);
 	});
 
 	it("skips empty-body overall review", async () => {
@@ -704,6 +714,26 @@ describe("pr-review ingestion", () => {
 		assert.ok(inlineLesson, "should have a pr_review_inline lesson");
 		assert.ok(inlineLesson.tags.includes("inline-comment"), "should have inline-comment tag");
 		assert.ok(inlineLesson.tags.includes("current"), "should have current tag (not outdated)");
+		// Verify metadata fields
+		assert.ok(inlineLesson.metadata, "lesson should have metadata");
+		assert.equal(inlineLesson.metadata.comment_id, 2001);
+		assert.equal(inlineLesson.metadata.file_path, "src/storage.ts");
+		assert.equal(inlineLesson.metadata.original_line, 312);
+		assert.equal(inlineLesson.metadata.line, 315);
+		assert.equal(inlineLesson.metadata.position, 5);
+		assert.equal(inlineLesson.metadata.side, "RIGHT");
+		assert.equal(inlineLesson.metadata.commit_id, "5849278fa1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6");
+		assert.ok(
+			typeof inlineLesson.metadata.diff_hunk === "string" &&
+				inlineLesson.metadata.diff_hunk.length > 0,
+			"diff_hunk should be a non-empty string",
+		);
+		assert.equal(inlineLesson.metadata.is_outdated, false);
+		assert.equal(inlineLesson.metadata.parent_comment_id, null);
+		assert.equal(inlineLesson.metadata.original_position, 5);
+		assert.deepEqual(inlineLesson.metadata.reviewer, { login: "bob" });
+		assert.equal(inlineLesson.metadata.created_at, "2026-03-20T09:00:00Z");
+		assert.equal(inlineLesson.metadata.updated_at, "2026-03-20T09:00:00Z");
 	});
 
 	it("preserves multi-line start_line/end_line range in source_kind", async () => {
@@ -711,6 +741,14 @@ describe("pr-review ingestion", () => {
 		const inlineLesson = lessons.find((l) => l.source_kind === "pr_review_inline");
 		assert.ok(inlineLesson, "should have an inline lesson");
 		assert.equal(inlineLesson.source_kind, "pr_review_inline");
+		// Verify metadata has multi-line range
+		assert.ok(inlineLesson.metadata, "lesson should have metadata");
+		assert.equal(inlineLesson.metadata.start_line, 42);
+		assert.equal(inlineLesson.metadata.line, 47);
+		assert.equal(inlineLesson.metadata.original_start_line, 42);
+		assert.equal(inlineLesson.metadata.original_line, 47);
+		assert.equal(inlineLesson.metadata.side, "RIGHT");
+		assert.equal(inlineLesson.metadata.start_side, "RIGHT");
 	});
 
 	it("flags outdated inline comment (position null)", async () => {
@@ -719,6 +757,11 @@ describe("pr-review ingestion", () => {
 		const inlineLesson = lessons.find((l) => l.source_kind === "pr_review_inline");
 		assert.ok(inlineLesson, "should have an inline lesson");
 		assert.ok(inlineLesson.tags.includes("outdated"), "should tag as outdated");
+		// Verify metadata: is_outdated should be true, position null
+		assert.ok(inlineLesson.metadata, "lesson should have metadata");
+		assert.equal(inlineLesson.metadata.is_outdated, true);
+		assert.equal(inlineLesson.metadata.position, null);
+		assert.equal(inlineLesson.metadata.original_position, 2);
 	});
 
 	// ── Surface 3: Threaded replies ───────────────────────────────────
@@ -731,6 +774,17 @@ describe("pr-review ingestion", () => {
 		const replyLesson = lessons.find((l) => l.source_kind === "pr_review_reply");
 		assert.ok(replyLesson, "should have a pr_review_reply lesson");
 		assert.ok(replyLesson.tags.includes("reply"), "should have reply tag");
+		// Verify metadata: parent_comment_id set
+		assert.ok(replyLesson.metadata, "reply lesson should have metadata");
+		assert.equal(replyLesson.metadata.parent_comment_id, 4001);
+		assert.equal(replyLesson.metadata.comment_id, 4002);
+
+		// Verify original inline comment has parent_comment_id null
+		const inlineLesson = lessons.find((l) => l.source_kind === "pr_review_inline");
+		assert.ok(inlineLesson, "should have a pr_review_inline lesson");
+		assert.ok(inlineLesson.metadata, "inline lesson should have metadata");
+		assert.equal(inlineLesson.metadata.parent_comment_id, null);
+		assert.equal(inlineLesson.metadata.comment_id, 4001);
 	});
 
 	// ── Surface 4: Issue-style comments ───────────────────────────────
@@ -742,6 +796,17 @@ describe("pr-review ingestion", () => {
 		assert.ok(discussionLessons.length >= 2, "should have at least 2 pr_discussion lessons");
 		for (const lesson of discussionLessons) {
 			assert.ok(lesson.tags.includes("discussion"), "should have discussion tag");
+			// Verify metadata fields
+			assert.ok(lesson.metadata, "discussion lesson should have metadata");
+			assert.ok(typeof lesson.metadata.comment_id === "number", "should have comment_id");
+			assert.ok(lesson.metadata.html_url, "should have html_url");
+			assert.ok(lesson.metadata.created_at, "should have created_at");
+			// Issue-style comments should NOT have inline-only fields
+			assert.equal(lesson.metadata.diff_hunk, undefined, "should not have diff_hunk");
+			assert.equal(lesson.metadata.original_line, undefined, "should not have original_line");
+			assert.equal(lesson.metadata.start_line, undefined, "should not have start_line");
+			assert.equal(lesson.metadata.position, undefined, "should not have position");
+			assert.equal(lesson.metadata.side, undefined, "should not have side");
 		}
 	});
 

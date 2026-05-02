@@ -72,6 +72,12 @@ interface ChangelogEntry {
 	sections: string[];
 }
 
+/** Shared mutable cap state for --max enforcement before persistence. */
+interface CapState {
+	addedCount: number;
+	maxCap: number | undefined;
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 
 /** Quality preset model overrides. */
@@ -83,6 +89,12 @@ const QUALITY_PRESETS: Record<string, { extraction: string; judge: string; embed
 
 /** Minimum content length to be considered extractable. */
 const MIN_CONTENT_LENGTH = 20;
+
+/** Check if the --max cap has been reached. */
+function capReached(cap: CapState): boolean {
+	if (cap.maxCap === undefined || cap.maxCap <= 0) return false;
+	return cap.addedCount >= cap.maxCap;
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -217,6 +229,7 @@ async function ingestChangelog(
 	since: Date | undefined,
 	stats: HistoryStats,
 	allLessons: Lesson[],
+	cap: CapState,
 ): Promise<void> {
 	const changelogPath = join(repoPath, "CHANGELOG.md");
 	if (!existsSync(changelogPath)) {
@@ -230,6 +243,7 @@ async function ingestChangelog(
 	info("CHANGELOG entries found", { count: entries.length });
 
 	for (const entry of entries) {
+		if (capReached(cap)) return;
 		// Apply --since filter
 		if (!isAfterSince(entry.date, since)) continue;
 
@@ -247,6 +261,7 @@ async function ingestChangelog(
 		const lessons = await extractLessons(source, config);
 
 		for (const lesson of lessons) {
+			if (capReached(cap)) return;
 			lesson.source_kind = "changelog";
 			lesson.source_url = `file://${join(repoPath, "CHANGELOG.md")}`;
 			lesson.original_incident_date = entry.date;
@@ -262,6 +277,7 @@ async function ingestChangelog(
 					stats.lessons_skipped_dedup++;
 				} else {
 					stats.lessons_added++;
+					cap.addedCount++;
 					allLessons.push(lesson);
 				}
 			}
@@ -278,6 +294,7 @@ async function ingestAdrs(
 	since: Date | undefined,
 	stats: HistoryStats,
 	allLessons: Lesson[],
+	cap: CapState,
 ): Promise<void> {
 	const adrDir = join(repoPath, "docs", "adr");
 	if (!existsSync(adrDir)) {
@@ -292,6 +309,7 @@ async function ingestAdrs(
 	info("ADR files found", { count: files.length });
 
 	for (const fileName of files) {
+		if (capReached(cap)) return;
 		const filePath = join(adrDir, fileName);
 		const content = readFileSync(filePath, "utf-8");
 
@@ -314,6 +332,7 @@ async function ingestAdrs(
 		const lessons = await extractLessons(source, config);
 
 		for (const lesson of lessons) {
+			if (capReached(cap)) return;
 			lesson.source_kind = "adr";
 			lesson.source_url = `file://${filePath}`;
 			lesson.original_incident_date = date;
@@ -329,6 +348,7 @@ async function ingestAdrs(
 					stats.lessons_skipped_dedup++;
 				} else {
 					stats.lessons_added++;
+					cap.addedCount++;
 					allLessons.push(lesson);
 				}
 			}
@@ -345,6 +365,7 @@ async function ingestPostMortems(
 	since: Date | undefined,
 	stats: HistoryStats,
 	allLessons: Lesson[],
+	cap: CapState,
 ): Promise<void> {
 	const pmDir = join(repoPath, "docs", "post-mortems");
 	if (!existsSync(pmDir)) {
@@ -359,6 +380,7 @@ async function ingestPostMortems(
 	info("Post-mortem files found", { count: files.length });
 
 	for (const fileName of files) {
+		if (capReached(cap)) return;
 		const filePath = join(pmDir, fileName);
 		const content = readFileSync(filePath, "utf-8");
 
@@ -383,6 +405,7 @@ async function ingestPostMortems(
 		const lessons = await extractLessons(source, config);
 
 		for (const lesson of lessons) {
+			if (capReached(cap)) return;
 			lesson.source_kind = "post_mortem";
 			lesson.source_url = `file://${filePath}`;
 			lesson.original_incident_date = date;
@@ -398,6 +421,7 @@ async function ingestPostMortems(
 					stats.lessons_skipped_dedup++;
 				} else {
 					stats.lessons_added++;
+					cap.addedCount++;
 					allLessons.push(lesson);
 				}
 			}
@@ -416,6 +440,7 @@ async function ingestClosedIssues(
 	since: Date | undefined,
 	stats: HistoryStats,
 	allLessons: Lesson[],
+	cap: CapState,
 ): Promise<void> {
 	if (!ghClient) {
 		info("No GitHub client provided, skipping closed issues");
@@ -428,6 +453,7 @@ async function ingestClosedIssues(
 	info("Closed issues found", { count: issues.length });
 
 	for (const issue of issues) {
+		if (capReached(cap)) return;
 		// Apply --since filter
 		if (!isAfterSince(issue.closed_at, since)) continue;
 
@@ -451,6 +477,7 @@ async function ingestClosedIssues(
 		const lessons = await extractLessons(source, config);
 
 		for (const lesson of lessons) {
+			if (capReached(cap)) return;
 			lesson.source_kind = "closed_issue";
 			lesson.source_url = issue.html_url;
 			lesson.original_incident_date = issue.closed_at.slice(0, 10);
@@ -476,6 +503,7 @@ async function ingestClosedIssues(
 					stats.lessons_skipped_dedup++;
 				} else {
 					stats.lessons_added++;
+					cap.addedCount++;
 					allLessons.push(lesson);
 				}
 			}
@@ -492,6 +520,7 @@ async function ingestGitCommits(
 	since: Date | undefined,
 	stats: HistoryStats,
 	allLessons: Lesson[],
+	cap: CapState,
 ): Promise<void> {
 	if (!existsSync(join(repoPath, ".git"))) {
 		info("No .git directory found, skipping git commits");
@@ -521,6 +550,7 @@ async function ingestGitCommits(
 		info("Fix/revert/bug commits found", { count: fixCommits.length });
 
 		for (const commit of fixCommits) {
+			if (capReached(cap)) return;
 			const msg = commit.message.trim();
 			const date = commit.date.slice(0, 10);
 
@@ -547,6 +577,7 @@ async function ingestGitCommits(
 			const lessons = await extractLessons(source, config);
 
 			for (const lesson of lessons) {
+				if (capReached(cap)) return;
 				lesson.source_kind = "fix_commit";
 				lesson.source_url = commit.hash ?? "";
 				lesson.original_incident_date = date;
@@ -567,6 +598,7 @@ async function ingestGitCommits(
 						stats.lessons_skipped_dedup++;
 					} else {
 						stats.lessons_added++;
+						cap.addedCount++;
 						allLessons.push(lesson);
 					}
 				}
@@ -608,6 +640,7 @@ export async function ingestHistory(
 	const stats = emptyStats();
 	const allLessons: Lesson[] = [];
 	const config = buildConfig(owner, repo, memoryDir, quality, dryRun);
+	const cap: CapState = { addedCount: 0, maxCap: max };
 
 	let adapter: MemoryAdapter | null = null;
 	if (!dryRun) {
@@ -617,13 +650,13 @@ export async function ingestHistory(
 	// ── Run each source ────────────────────────────────────────────────
 
 	// 1. CHANGELOG
-	await ingestChangelog(repoPath, config, adapter, dryRun, since, stats, allLessons);
+	await ingestChangelog(repoPath, config, adapter, dryRun, since, stats, allLessons, cap);
 
 	// 2. ADRs
-	await ingestAdrs(repoPath, config, adapter, dryRun, since, stats, allLessons);
+	await ingestAdrs(repoPath, config, adapter, dryRun, since, stats, allLessons, cap);
 
 	// 3. Post-mortems
-	await ingestPostMortems(repoPath, config, adapter, dryRun, since, stats, allLessons);
+	await ingestPostMortems(repoPath, config, adapter, dryRun, since, stats, allLessons, cap);
 
 	// 4. Closed issues (requires GitHub client)
 	await ingestClosedIssues(
@@ -636,15 +669,11 @@ export async function ingestHistory(
 		since,
 		stats,
 		allLessons,
+		cap,
 	);
 
 	// 5. Git commits (fix:/revert:/bug:)
-	await ingestGitCommits(repoPath, config, adapter, dryRun, since, stats, allLessons);
-
-	// ── Apply --max cap ────────────────────────────────────────────────
-	if (max !== undefined && max > 0 && allLessons.length > max) {
-		allLessons.length = max;
-	}
+	await ingestGitCommits(repoPath, config, adapter, dryRun, since, stats, allLessons, cap);
 
 	// ── Shutdown adapter ───────────────────────────────────────────────
 

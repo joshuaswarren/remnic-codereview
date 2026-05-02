@@ -57,6 +57,14 @@ export const LessonSchema = z.object({
 	 * same lesson regardless of LLM non-determinism.
 	 */
 	source_hash: z.string().optional(),
+	/**
+	 * Source-specific metadata propagated from IngestSource through extraction.
+	 * PR-review lessons carry fields like pull_request_review_id, state, reviewer,
+	 * submitted_at, comment_id, file_path, line, diff_hunk, commit_id, position,
+	 * side, is_outdated, parent_comment_id, html_url, created_at, updated_at, etc.
+	 * Other source kinds may store their own domain-specific fields here.
+	 */
+	metadata: z.record(z.unknown()).optional(),
 });
 
 /** Inferred TypeScript type from the Lesson schema. */
