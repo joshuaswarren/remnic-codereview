@@ -5,9 +5,11 @@ import { readFileSync } from "node:fs";
 import { runInit } from "./cli/init.js";
 import { runLessonsList, runLessonsShow } from "./cli/lessons.js";
 import { createProgram, type ParsedCommand } from "./cli.js";
+import { getGitHubClient } from "./github/client.js";
 import { ingestHistory } from "./ingest/history.js";
 import { ingestPrReviews } from "./ingest/pr-reviews.js";
 import { ingestRules } from "./ingest/rules.js";
+import { runReview } from "./review/run-review.js";
 import { expandTilde } from "./utils/expand-tilde.js";
 
 function getVersion(): string {
@@ -56,6 +58,14 @@ function executeCommand(cmd: ParsedCommand): void {
 
 		case "lessons-show":
 			executeLessonsShow(cmd).catch((err: unknown) => {
+				const message = err instanceof Error ? err.message : String(err);
+				process.stderr.write(`Error: ${message}\n`);
+				process.exit(1);
+			});
+			break;
+
+		case "review":
+			executeReview(cmd).catch((err: unknown) => {
 				const message = err instanceof Error ? err.message : String(err);
 				process.stderr.write(`Error: ${message}\n`);
 				process.exit(1);
@@ -255,6 +265,63 @@ async function executeLessonsShow(
 		lessonId: cmd.lessonId,
 		json: cmd.json ?? false,
 	});
+}
+
+/** Execute the review command (async). */
+async function executeReview(cmd: Extract<ParsedCommand, { command: "review" }>): Promise<void> {
+	// Check prerequisites before making any calls
+	if (!process.env.OPENAI_API_KEY && process.env.OPENAI_JUDGE_STUB !== "1") {
+		process.stderr.write(
+			"Error: OPENAI_API_KEY is not set. Set it in your environment or secrets.env.\n",
+		);
+		process.exit(1);
+	}
+	if (!process.env.GITHUB_TOKEN && process.env.OPENAI_JUDGE_STUB !== "1") {
+		process.stderr.write(
+			"Error: GITHUB_TOKEN is not set. Set it in your environment or secrets.env.\n",
+		);
+		process.exit(1);
+	}
+
+	// Validate threshold if provided
+	if (cmd.threshold !== undefined) {
+		if (Number.isNaN(cmd.threshold) || cmd.threshold < 0 || cmd.threshold > 1) {
+			process.stderr.write(
+				`Error: --threshold must be a number in [0, 1], got: ${cmd.threshold}\n`,
+			);
+			process.exit(1);
+		}
+	}
+
+	const [owner, repo] = cmd.slug.split("/");
+	if (!owner || !repo) {
+		process.stderr.write(`Error: Invalid slug: "${cmd.slug}". Expected <owner>/<repo> format.\n`);
+		process.exit(1);
+	}
+	const memoryDir = cmd.memoryDir ?? `~/.remnic-codereview/${owner}__${repo}`;
+	const client = await getGitHubClient();
+
+	const result = await runReview(client, {
+		owner,
+		repo,
+		prNumber: cmd.prNumber,
+		memoryDir: expandTilde(memoryDir),
+		quality: cmd.quality,
+		dryRun: cmd.dryRun,
+		target: cmd.target,
+		threshold: cmd.threshold,
+	});
+
+	process.stdout.write(result.rendered);
+	process.stdout.write("\n");
+
+	if (result.hadBinaryHunks) {
+		process.stderr.write("Note: binary diff detected — skipped.\n");
+	}
+
+	if (result.commentCount === 0 && result.hunkCount > 0) {
+		process.stderr.write("Note: no relevant lessons found.\n");
+	}
 }
 
 const program = createProgram({

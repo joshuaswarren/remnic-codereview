@@ -1,0 +1,16 @@
+diff --git a/src/old-name.ts b/src/new-name.ts
+similarity index 80%
+rename from src/old-name.ts
+rename to src/new-name.ts
+index 3a4b5c6..7d8e9f0 100644
+--- a/src/old-name.ts
++++ b/src/new-name.ts
+@@ -5,7 +5,7 @@ export function processItems(items: Item[]): Item[] {
+ }
+ 
+ export function getRecent(items: Item[], n: number): Item[] {
+-  return items.slice(-n);
++  return n > 0 ? items.slice(-n) : [];
+ }
+ 
+ export function validate(input: string): boolean {

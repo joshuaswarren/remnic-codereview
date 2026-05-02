@@ -1,0 +1,13 @@
+diff --git a/src/storage.ts b/src/storage.ts
+index 3a4b5c6..7d8e9f0 100644
+--- a/src/storage.ts
++++ b/src/storage.ts
+@@ -15,6 +15,8 @@ export class Storage {
+   }
+ 
+   async getRecent(n: number): Promise<Item[]> {
+-    return this.items.slice(-n);
++    const result = this.items.slice(-n);
++    return result;
+   }
+ }

@@ -1,0 +1,28 @@
+diff --git a/src/storage.ts b/src/storage.ts
+index 3a4b5c6..7d8e9f0 100644
+--- a/src/storage.ts
++++ b/src/storage.ts
+@@ -15,6 +15,8 @@ export class Storage {
+   }
+ 
+   async getRecent(n: number): Promise<Item[]> {
+-    return this.items.slice(-n);
++    const result = this.items.slice(-n);
++    return result;
+   }
+ }
+diff --git a/src/utils.ts b/src/utils.ts
+index abcdef1..1234567 100644
+--- a/src/utils.ts
++++ b/src/utils.ts
+@@ -10,6 +10,10 @@ export function helper(x: string): void {
+   console.log(x);
+ }
+ 
++export function newHelper(y: string): void {
++  console.log(y.toLowerCase());
++}
++
+ export function oldHelper(): void {
+   return;
+ }
