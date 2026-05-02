@@ -1,6 +1,9 @@
 // Express app factory — JSON middleware, CORS localhost-only, routes, error handler.
 // No auth in v1 (localhost only). JSON-only API under /api/*.
+// Static SPA serving from admin-console/dist/ (Vite production build).
 
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import express from "express";
 import type { MemoryAdapter } from "../memory/adapter.js";
 import { healthRouter } from "./routes/health.js";
@@ -74,6 +77,23 @@ export function createApp(opts: AppOptions): express.Express {
 	app.use("/api", (_req, res) => {
 		res.status(404).json({ error: { code: "NOT_FOUND", message: "API endpoint not found" } });
 	});
+
+	// ─── Static SPA serving from admin-console/dist/ ──────────────────────
+	// The CLI bundles everything into dist/cli.js, so import.meta.url points
+	// there. Use the project root relative to the dist/ directory.
+	const cliDir = resolve(new URL(".", import.meta.url).pathname, ".");
+	const projectRoot = resolve(cliDir, "..");
+	const uiDist = resolve(projectRoot, "admin-console/dist");
+	if (existsSync(uiDist)) {
+		// Serve static assets (JS, CSS, images) with correct MIME types
+		app.use(express.static(uiDist));
+
+		// SPA fallback: any non-API, non-static path returns index.html
+		// so client-side routing can handle it
+		app.get("/{*splat}", (_req, res) => {
+			res.sendFile(resolve(uiDist, "index.html"));
+		});
+	}
 
 	// ─── Centralized error handler ─────────────────────────────────────────
 	app.use(
