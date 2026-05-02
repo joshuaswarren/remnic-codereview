@@ -85,6 +85,23 @@ function stubExtractLessons(source: IngestSource, config: Config): Lesson[] {
 	if (hash.charCodeAt(10) % 3 === 0) tags.push("best-practice");
 	if (hash.charCodeAt(12) % 4 === 0) tags.push("security");
 
+	// Extract pattern keywords from the source content for meaningful matching.
+	// Looks for code-like patterns (function calls, operators) in the text.
+	const codePatterns: string[] = [];
+	const codePatternRegex = /[`"']([a-zA-Z_.]+\([^)]*\))[`"']/g;
+	for (const m of raw.matchAll(codePatternRegex)) {
+		if (m[1] && !codePatterns.includes(m[1])) {
+			codePatterns.push(m[1]);
+		}
+	}
+	// Also extract patterns from backtick-quoted expressions
+	const backtickRegex = /`([^`]+)`/g;
+	for (const m of raw.matchAll(backtickRegex)) {
+		if (m[1] && m[1].length >= 4 && !codePatterns.includes(m[1])) {
+			codePatterns.push(m[1]);
+		}
+	}
+
 	// Generate a stable lesson ID from the content hash
 	const id = `les_${hash.slice(0, 24)}`;
 
@@ -111,7 +128,7 @@ function stubExtractLessons(source: IngestSource, config: Config): Lesson[] {
 			original_incident_date: new Date().toISOString().slice(0, 10),
 			still_applies: stillApplies,
 			tags: [...tags],
-			pattern_keywords: [source.type],
+			pattern_keywords: codePatterns.length > 0 ? codePatterns.slice(0, 5) : [source.type],
 			what_to_check: `Check for patterns related to: ${raw.slice(0, 50).trimEnd()}`,
 		});
 	}

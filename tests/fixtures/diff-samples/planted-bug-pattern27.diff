@@ -1,0 +1,25 @@
+diff --git a/src/storage.ts b/src/storage.ts
+index abc1234..def5678 100644
+--- a/src/storage.ts
++++ b/src/storage.ts
+@@ -30,7 +30,7 @@ export class Storage {
+   }
+ 
+   async getRecentItems(count: number): Promise<StorageItem[]> {
+-    return this.allItems.slice(-count);
++    return this.allItems.slice(-count);
+   }
+ 
+   async getOldestItems(count: number): Promise<StorageItem[]> {
+@@ -45,7 +45,7 @@ export class Storage {
+   }
+ 
+   async paginate(page: number, perPage: number): Promise<StorageItem[]> {
+-    const start = (page - 1) * perPage;
+-    const end = start + perPage;
+-    return this.allItems.slice(start, end);
++    const total = this.allItems.length;
++    const tailItems = this.allItems.slice(-perPage);
++    return tailItems;
+   }
+ }
