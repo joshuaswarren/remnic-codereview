@@ -20,7 +20,7 @@ import { extractLessons } from "./extraction.js";
 
 // ── Bot user names excluded by default ───────────────────────────────────────
 
-const KNOWN_BOTS = new Set([
+export const KNOWN_BOTS = new Set([
 	"chatgpt-codex-connector[bot]",
 	"cursor[bot]",
 	"codeql",
