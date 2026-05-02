@@ -123,6 +123,19 @@ export interface PostReviewResult {
 	[key: string]: unknown;
 }
 
+/** Closed issue returned by listClosedIssues. */
+export interface ClosedIssue {
+	number: number;
+	title: string;
+	body: string | null;
+	state: string;
+	labels: Array<{ name: string }>;
+	html_url: string;
+	closed_at: string;
+	user: { login: string } | null;
+	[key: string]: unknown;
+}
+
 /** Options for listPRs. */
 export interface ListPRsOptions {
 	state?: "open" | "closed" | "all";
@@ -167,6 +180,12 @@ export interface GitHubClient {
 	listReviews(owner: string, repo: string, prNumber: number): Promise<ReviewObject[]>;
 	listReviewComments(owner: string, repo: string, prNumber: number): Promise<ReviewComment[]>;
 	listIssueComments(owner: string, repo: string, prNumber: number): Promise<IssueComment[]>;
+	listClosedIssues(
+		owner: string,
+		repo: string,
+		labels?: string[],
+		since?: Date,
+	): Promise<ClosedIssue[]>;
 	postReview(
 		owner: string,
 		repo: string,
@@ -326,6 +345,27 @@ export function createGitHubClientFromOctokit(octokit: Octokit): GitHubClient {
 					issue_number: prNumber,
 				}),
 			) as Promise<unknown> as Promise<IssueComment[]>;
+		},
+
+		async listClosedIssues(
+			owner: string,
+			repo: string,
+			labels?: string[],
+			since?: Date,
+		): Promise<ClosedIssue[]> {
+			const effectiveLabels = labels ?? ["bug", "security"];
+			return withRetry(() =>
+				octokit.paginate(octokit.rest.issues.listForRepo, {
+					owner,
+					repo,
+					state: "closed",
+					labels: effectiveLabels.join(","),
+					sort: "updated",
+					direction: "desc",
+					per_page: 100,
+					...(since ? { since: since.toISOString() } : {}),
+				}),
+			) as Promise<unknown> as Promise<ClosedIssue[]>;
 		},
 
 		async postReview(

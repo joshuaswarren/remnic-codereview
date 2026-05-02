@@ -45,6 +45,7 @@ function mockGitHubClient(diff: string): GitHubClient {
 		listReviews: mock.fn(() => Promise.resolve([])),
 		listReviewComments: mock.fn(() => Promise.resolve([])),
 		listIssueComments: mock.fn(() => Promise.resolve([])),
+		listClosedIssues: mock.fn(() => Promise.resolve([])),
 		postReview: mock.fn(() =>
 			Promise.resolve({
 				id: 1,

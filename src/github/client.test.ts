@@ -571,6 +571,141 @@ describe("GitHubClient", () => {
 		});
 	});
 
+	// ── listClosedIssues ──────────────────────────────────────────────────────
+
+	describe("listClosedIssues", () => {
+		const CLOSED_ISSUES_FIXTURE = [
+			{
+				number: 10,
+				title: "Memory corruption on atomic write failure",
+				body: "A power loss during write corrupted the memory store.",
+				state: "closed",
+				labels: [{ name: "bug" }],
+				html_url: "https://github.com/acme/widgets/issues/10",
+				closed_at: "2026-04-12T10:00:00Z",
+				user: { login: "developer" },
+			},
+			{
+				number: 11,
+				title: "Token exposed in stderr logs",
+				body: "The API key was being logged in plaintext.",
+				state: "closed",
+				labels: [{ name: "security" }],
+				html_url: "https://github.com/acme/widgets/issues/11",
+				closed_at: "2026-04-15T12:00:00Z",
+				user: { login: "security-team" },
+			},
+			{
+				number: 12,
+				title: "Add support for dark mode",
+				body: "Users want dark mode.",
+				state: "closed",
+				labels: [{ name: "enhancement" }],
+				html_url: "https://github.com/acme/widgets/issues/12",
+				closed_at: "2026-04-20T08:00:00Z",
+				user: { login: "product" },
+			},
+		];
+
+		it("returns closed issues with bug and security labels", async () => {
+			const client = createTestClient((route) => {
+				if (routeMatches(route, "/issues") && !route.includes("/comments")) {
+					return { status: 200, data: CLOSED_ISSUES_FIXTURE.slice(0, 2) };
+				}
+				return undefined;
+			});
+
+			const issues = await client.listClosedIssues("acme", "widgets", ["bug", "security"]);
+
+			assert.ok(Array.isArray(issues), "should return an array");
+			assert.equal(issues.length, 2, "should return 2 issues with bug/security labels");
+			assert.equal(issues[0]?.number, 10);
+			assert.equal(issues[0]?.title, "Memory corruption on atomic write failure");
+			assert.equal(issues[1]?.number, 11);
+			assert.equal(issues[1]?.labels[0]?.name, "security");
+		});
+
+		it("passes labels and state=closed to the API", async () => {
+			const client = createTestClient((route) => {
+				if (routeMatches(route, "/issues") && !route.includes("/comments")) {
+					return { status: 200, data: CLOSED_ISSUES_FIXTURE.slice(0, 2) };
+				}
+				return undefined;
+			});
+
+			await client.listClosedIssues("acme", "widgets", ["bug", "security"]);
+
+			// Find the call to the issues endpoint
+			const issueCalls = callLog.filter(
+				(c) => routeMatches(c.route, "/issues") && !c.route.includes("/comments"),
+			);
+			assert.ok(issueCalls.length >= 1, "should have made at least one call to issues endpoint");
+
+			const url = issueCalls[0]?.route ?? "";
+			// Octokit sends query params in the URL
+			assert.ok(url.includes("state=closed"), `URL should contain 'state=closed': ${url}`);
+			assert.ok(url.includes("labels="), `URL should contain 'labels=': ${url}`);
+		});
+
+		it("passes since parameter when provided", async () => {
+			const client = createTestClient((route) => {
+				if (routeMatches(route, "/issues") && !route.includes("/comments")) {
+					return { status: 200, data: [] };
+				}
+				return undefined;
+			});
+
+			await client.listClosedIssues("acme", "widgets", ["bug"], new Date("2026-04-01"));
+
+			const issueCalls = callLog.filter(
+				(c) => routeMatches(c.route, "/issues") && !c.route.includes("/comments"),
+			);
+			assert.ok(issueCalls.length >= 1, "should have made at least one call");
+			const url = issueCalls[0]?.route ?? "";
+			assert.ok(url.includes("since="), `URL should contain 'since=' parameter: ${url}`);
+		});
+
+		it("defaults to bug,security labels when no labels provided", async () => {
+			const client = createTestClient((route) => {
+				if (routeMatches(route, "/issues") && !route.includes("/comments")) {
+					return { status: 200, data: [] };
+				}
+				return undefined;
+			});
+
+			await client.listClosedIssues("acme", "widgets");
+
+			const issueCalls = callLog.filter(
+				(c) => routeMatches(c.route, "/issues") && !c.route.includes("/comments"),
+			);
+			assert.ok(issueCalls.length >= 1, "should have made at least one call");
+			const url = issueCalls[0]?.route ?? "";
+			assert.ok(
+				url.includes("bug") && url.includes("security"),
+				`URL should contain default labels: ${url}`,
+			);
+		});
+
+		it("retries on 5xx and eventually succeeds", async () => {
+			let attemptCount = 0;
+			const client = createTestClient((route) => {
+				if (routeMatches(route, "/issues") && !route.includes("/comments")) {
+					attemptCount++;
+					if (attemptCount === 1) {
+						return { status: 503, data: { message: "Service Unavailable" } };
+					}
+					return { status: 200, data: CLOSED_ISSUES_FIXTURE.slice(0, 1) };
+				}
+				return undefined;
+			});
+
+			const issues = await client.listClosedIssues("acme", "widgets", ["bug"]);
+
+			assert.ok(Array.isArray(issues), "should succeed after retry");
+			assert.ok(attemptCount >= 2, `expected >= 2 attempts, got ${attemptCount}`);
+		});
+	});
+
 	// ── Auth ─────────────────────────────────────────────────────────────────
 
 	describe("auth", () => {

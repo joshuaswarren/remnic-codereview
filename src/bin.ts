@@ -11,6 +11,7 @@ import { ingestPrReviews } from "./ingest/pr-reviews.js";
 import { ingestRules } from "./ingest/rules.js";
 import { runReview } from "./review/run-review.js";
 import { expandTilde } from "./utils/expand-tilde.js";
+import { parseSinceDate } from "./utils/parse-since-date.js";
 
 function getVersion(): string {
 	try {
@@ -105,11 +106,11 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 		const includeBots = cmd.includeBots ?? false;
 		let since: Date | undefined;
 		if (cmd.since) {
-			since = new Date(cmd.since);
-			if (Number.isNaN(since.getTime())) {
-				process.stderr.write(
-					`Error: Invalid --since value: "${cmd.since}". Expected ISO 8601 date (e.g. 2026-01-01).\n`,
-				);
+			try {
+				since = parseSinceDate(cmd.since);
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				process.stderr.write(`Error: ${message}\n`);
 				process.exit(1);
 			}
 		}
@@ -141,16 +142,30 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 		}
 		const [owner, repo] = slugParts;
 		const memoryDirResolved = expandTilde(memoryDir);
-		const result = await ingestHistory({
-			owner,
-			repo,
-			repoPath: process.cwd(),
-			memoryDir: memoryDirResolved,
-			quality: cmd.quality,
-			dryRun: cmd.dryRun,
-			since: cmd.since ? new Date(cmd.since) : undefined,
-			max: cmd.max,
-		});
+		let since: Date | undefined;
+		if (cmd.since) {
+			try {
+				since = parseSinceDate(cmd.since);
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				process.stderr.write(`Error: ${message}\n`);
+				process.exit(1);
+			}
+		}
+		const ghClient = await getGitHubClient().catch(() => undefined);
+		const result = await ingestHistory(
+			{
+				owner,
+				repo,
+				repoPath: process.cwd(),
+				memoryDir: memoryDirResolved,
+				quality: cmd.quality,
+				dryRun: cmd.dryRun,
+				since,
+				max: cmd.max,
+			},
+			ghClient,
+		);
 		process.stdout.write(`${result.stdout}\n`);
 		return;
 	}
@@ -163,7 +178,16 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 		}
 		const [owner, repo] = slugParts;
 		const memoryDirResolved = expandTilde(memoryDir);
-		const since = cmd.since ? new Date(cmd.since) : undefined;
+		let since: Date | undefined;
+		if (cmd.since) {
+			try {
+				since = parseSinceDate(cmd.since);
+			} catch (err: unknown) {
+				const message = err instanceof Error ? err.message : String(err);
+				process.stderr.write(`Error: ${message}\n`);
+				process.exit(1);
+			}
+		}
 
 		// 1. Rules ingestion (using current directory as rules source)
 		process.stdout.write("=== Rules ingestion ===\n");
@@ -206,17 +230,21 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 
 		// 3. History
 		process.stdout.write("=== History ingestion ===\n");
+		const ghClient = await getGitHubClient().catch(() => undefined);
 		try {
-			const histResult = await ingestHistory({
-				owner,
-				repo,
-				repoPath: process.cwd(),
-				memoryDir: memoryDirResolved,
-				quality: cmd.quality,
-				dryRun: cmd.dryRun,
-				since,
-				max: cmd.max,
-			});
+			const histResult = await ingestHistory(
+				{
+					owner,
+					repo,
+					repoPath: process.cwd(),
+					memoryDir: memoryDirResolved,
+					quality: cmd.quality,
+					dryRun: cmd.dryRun,
+					since,
+					max: cmd.max,
+				},
+				ghClient,
+			);
 			process.stdout.write(`${histResult.stdout}\n`);
 		} catch (err: unknown) {
 			const message = err instanceof Error ? err.message : String(err);

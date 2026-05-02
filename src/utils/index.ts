@@ -4,3 +4,4 @@
 export { coerceBool, getValidBoolStrings } from "./coerce-bool.js";
 export { AppError, configError, notFound, validationError } from "./errors.js";
 export { expandTilde } from "./expand-tilde.js";
+export { parseSinceDate } from "./parse-since-date.js";
