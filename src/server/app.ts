@@ -79,10 +79,12 @@ export function createApp(opts: AppOptions): express.Express {
 	});
 
 	// ─── Static SPA serving from admin-console/dist/ ──────────────────────
-	// The CLI bundles everything into dist/cli.js, so import.meta.url points
-	// there. Use the project root relative to the dist/ directory.
-	const cliDir = resolve(new URL(".", import.meta.url).pathname, ".");
-	const projectRoot = resolve(cliDir, "..");
+	// Resolve the project root from import.meta.url.
+	// In production: dist/app.js → project root is one level up from dist/.
+	// In development (tsx): src/server/app.ts → project root is three levels up.
+	const thisDir = resolve(new URL(".", import.meta.url).pathname, ".");
+	const isDist = thisDir.endsWith("/dist") || thisDir.endsWith("/dist/");
+	const projectRoot = isDist ? resolve(thisDir, "..") : resolve(thisDir, "../..");
 	const uiDist = resolve(projectRoot, "admin-console/dist");
 	if (existsSync(uiDist)) {
 		// Serve static assets (JS, CSS, images) with correct MIME types
