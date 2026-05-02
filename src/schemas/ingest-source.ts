@@ -77,6 +77,51 @@ const prDiscussionSource = z.object({
 	html_url: z.string().min(1),
 });
 
+/** CHANGELOG entry source. */
+const changelogSource = z.object({
+	type: z.literal("changelog"),
+	repo_path: z.string().min(1),
+	file_path: z.string().min(1),
+	section_heading: z.string().optional(),
+	content: z.string().min(1),
+});
+
+/** Architecture Decision Record source. */
+const adrSource = z.object({
+	type: z.literal("adr"),
+	repo_path: z.string().min(1),
+	file_path: z.string().min(1),
+	section_heading: z.string().optional(),
+	content: z.string().min(1),
+});
+
+/** Post-mortem document source. */
+const postMortemSource = z.object({
+	type: z.literal("post_mortem"),
+	repo_path: z.string().min(1),
+	file_path: z.string().min(1),
+	section_heading: z.string().optional(),
+	content: z.string().min(1),
+});
+
+/** Closed issue (bug/security) source. */
+const closedIssueSource = z.object({
+	type: z.literal("closed_issue"),
+	repo_path: z.string().min(1),
+	file_path: z.string(),
+	section_heading: z.string().optional(),
+	content: z.string().min(1),
+});
+
+/** Fix/revert/bug commit source. */
+const fixCommitSource = z.object({
+	type: z.literal("fix_commit"),
+	repo_path: z.string().min(1),
+	file_path: z.string(),
+	section_heading: z.string().optional(),
+	content: z.string().min(1),
+});
+
 /** Discriminated union of all ingest source types. */
 export const IngestSourceSchema = z.discriminatedUnion("type", [
 	rulesDocSource,
@@ -84,6 +129,11 @@ export const IngestSourceSchema = z.discriminatedUnion("type", [
 	prReviewInlineSource,
 	prReviewReplySource,
 	prDiscussionSource,
+	changelogSource,
+	adrSource,
+	postMortemSource,
+	closedIssueSource,
+	fixCommitSource,
 ]);
 
 /** Inferred TypeScript type for IngestSource. */

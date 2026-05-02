@@ -40,6 +40,7 @@ export type ParsedCommand =
 			dryRun: boolean;
 			since: string | undefined;
 			maxPrs: number | undefined;
+			max: number | undefined;
 			includeBots: boolean | undefined;
 	  }
 	| {
@@ -240,6 +241,7 @@ export function createProgram(opts: CreateProgramOptions): Command {
 		)
 		.option("--since <date>", "Only ingest PRs merged on or after this ISO 8601 date")
 		.option("--max-prs <n>", "Maximum number of PRs to ingest", parsePositiveInt)
+		.option("--max <n>", "Maximum total lessons to ingest (history)", parsePositiveInt)
 		.option(
 			"--include-bots <bool>",
 			"Include bot-authored comments (true/false)",
@@ -279,6 +281,7 @@ export function createProgram(opts: CreateProgramOptions): Command {
 				dryRun: cmdOpts.dryRun ?? false,
 				since: cmdOpts.since,
 				maxPrs: cmdOpts.maxPrs,
+				max: cmdOpts.max,
 				includeBots: cmdOpts.includeBots as boolean | undefined,
 			});
 		});

@@ -6,3 +6,5 @@ secrets.env
 *.key
 .openai-cache/
 *.tsbuildinfo
+logs/
+tests/fixtures/history-corpus/.git/

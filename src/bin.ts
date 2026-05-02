@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { runInit } from "./cli/init.js";
 import { runLessonsList, runLessonsShow } from "./cli/lessons.js";
 import { createProgram, type ParsedCommand } from "./cli.js";
+import { ingestHistory } from "./ingest/history.js";
 import { ingestPrReviews } from "./ingest/pr-reviews.js";
 import { ingestRules } from "./ingest/rules.js";
 import { expandTilde } from "./utils/expand-tilde.js";
@@ -121,13 +122,98 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 	}
 
 	if (cmd.history) {
-		process.stderr.write("Error: --history is not yet implemented.\n");
-		process.exit(1);
+		const slugParts = cmd.history.split("/");
+		if (slugParts.length !== 2 || !slugParts[0] || !slugParts[1]) {
+			process.stderr.write(
+				`Error: Invalid slug: "${cmd.history}". Expected <owner>/<repo> format.\n`,
+			);
+			process.exit(1);
+		}
+		const [owner, repo] = slugParts;
+		const memoryDirResolved = expandTilde(memoryDir);
+		const result = await ingestHistory({
+			owner,
+			repo,
+			repoPath: process.cwd(),
+			memoryDir: memoryDirResolved,
+			quality: cmd.quality,
+			dryRun: cmd.dryRun,
+			since: cmd.since ? new Date(cmd.since) : undefined,
+			max: cmd.max,
+		});
+		process.stdout.write(`${result.stdout}\n`);
+		return;
 	}
 
 	if (cmd.all) {
-		process.stderr.write("Error: --all is not yet implemented.\n");
-		process.exit(1);
+		const slugParts = cmd.all.split("/");
+		if (slugParts.length !== 2 || !slugParts[0] || !slugParts[1]) {
+			process.stderr.write(`Error: Invalid slug: "${cmd.all}". Expected <owner>/<repo> format.\n`);
+			process.exit(1);
+		}
+		const [owner, repo] = slugParts;
+		const memoryDirResolved = expandTilde(memoryDir);
+		const since = cmd.since ? new Date(cmd.since) : undefined;
+
+		// 1. Rules ingestion (using current directory as rules source)
+		process.stdout.write("=== Rules ingestion ===\n");
+		try {
+			const rulesResult = await ingestRules({
+				rulesPath: process.cwd(),
+				memoryDir: memoryDirResolved,
+				quality: cmd.quality,
+				dryRun: cmd.dryRun,
+			});
+			process.stdout.write(`${rulesResult.stdout}\n`);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			process.stderr.write(`Rules ingestion skipped: ${message}\n`);
+		}
+
+		// 2. PR reviews
+		process.stdout.write("=== PR reviews ingestion ===\n");
+		const includeBots = cmd.includeBots ?? false;
+		if (cmd.maxPrs !== undefined && cmd.maxPrs <= 0) {
+			process.stderr.write(`Error: --max-prs must be a positive integer, got: ${cmd.maxPrs}.\n`);
+			process.exit(1);
+		}
+		try {
+			const prResult = await ingestPrReviews({
+				owner,
+				repo,
+				memoryDir: memoryDirResolved,
+				quality: cmd.quality,
+				dryRun: cmd.dryRun,
+				includeBots,
+				since,
+				maxPrs: cmd.maxPrs,
+			});
+			process.stdout.write(`${prResult.stdout}\n`);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			process.stderr.write(`PR reviews ingestion error: ${message}\n`);
+		}
+
+		// 3. History
+		process.stdout.write("=== History ingestion ===\n");
+		try {
+			const histResult = await ingestHistory({
+				owner,
+				repo,
+				repoPath: process.cwd(),
+				memoryDir: memoryDirResolved,
+				quality: cmd.quality,
+				dryRun: cmd.dryRun,
+				since,
+				max: cmd.max,
+			});
+			process.stdout.write(`${histResult.stdout}\n`);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			process.stderr.write(`History ingestion error: ${message}\n`);
+		}
+
+		return;
 	}
 
 	process.stderr.write(
