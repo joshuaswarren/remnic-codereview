@@ -91,3 +91,37 @@ export const SEVERITY_COLORS: Record<Severity, string> = {
   low: "var(--color-severity-low)",
   info: "var(--color-severity-info)",
 };
+
+/** Citation block appended to every posted comment. */
+export interface CitationBlock {
+  lesson_id: string;
+  source_kind: string;
+  source_url: string;
+  original_date: string;
+  confidence: number;
+}
+
+/** A single comment in a posted review. */
+export interface PostedComment {
+  path: string;
+  line: number;
+  body: string;
+  citation: CitationBlock;
+}
+
+/** A posted review record. */
+export interface PostedReview {
+  id: string;
+  owner: string;
+  repo: string;
+  pr_number: number;
+  posted_at: string;
+  dry_run: boolean;
+  comments: PostedComment[];
+}
+
+/** Paginated reviews response from GET /api/reviews. */
+export interface ReviewsResponse {
+  items: PostedReview[];
+  cursor?: string;
+}
