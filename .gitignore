@@ -8,3 +8,19 @@ secrets.env
 *.tsbuildinfo
 logs/
 tests/fixtures/history-corpus/.git/
+
+# Memory store directories (per-repo QMD data)
+.remnic-codereview/
+
+# Runtime / user-specific paths
+~/.remnic-codereview/
+
+# Build artifacts
+admin-console/dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# MCP data
+.mcp_data/

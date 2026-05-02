@@ -1,5 +1,6 @@
 // OpenAI client singleton — sets user-agent header per Remnic convention.
 // All OpenAI calls go through this single instance.
+// Used for openai.responses.create (extraction + judge) and openai.responses.parse.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

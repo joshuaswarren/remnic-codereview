@@ -1,5 +1,6 @@
 // Memory adapter — thin wrapper around EngramAccessService from @remnic/core.
 // One adapter per memoryDir. All methods accept explicit memoryDir via config.
+// Embedding is delegated to @remnic/core which calls OpenAI embeddings.create internally.
 
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";

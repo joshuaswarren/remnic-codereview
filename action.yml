@@ -1,0 +1,43 @@
+name: remnic-codereview
+description: Memory-augmented code review bot that learns from your team's past reviews
+inputs:
+  pr_number:
+    description: The pull request number to review
+    required: true
+  version:
+    description: Version of remnic-codereview to use (defaults to latest)
+    required: false
+    default: "latest"
+  dry_run:
+    description: If true, print the review without posting to GitHub
+    required: false
+    default: "false"
+  quality:
+    description: Quality preset for the review pipeline (default, high, or cheap)
+    required: false
+    default: "default"
+runs:
+  using: composite
+  steps:
+    - name: Install remnic-codereview
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          npm install -g remnic-codereview@latest 2>/dev/null || npx remnic-codereview@latest --help
+        else
+          npm install -g remnic-codereview@${{ inputs.version }} 2>/dev/null || npx remnic-codereview@${{ inputs.version }} --help
+        fi
+    - name: Run code review
+      shell: bash
+      run: |
+        ARGS=""
+        if [ "${{ inputs.dry_run }}" = "true" ]; then
+          ARGS="$ARGS --dry-run"
+        fi
+        if [ "${{ inputs.quality }}" != "default" ]; then
+          ARGS="$ARGS --quality ${{ inputs.quality }}"
+        fi
+        remnic-codereview review "${GITHUB_REPOSITORY}" "${{ inputs.pr_number }}" $ARGS
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

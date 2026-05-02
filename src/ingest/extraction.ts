@@ -1,5 +1,5 @@
 // Extraction engine — extracts Lessons from an IngestSource using OpenAI Responses API.
-// Uses Structured Outputs (json_schema, strict: true, additionalProperties: false).
+// Uses Structured Outputs via text.format (json_schema, strict: true, additionalProperties: false).
 // Supports OPENAI_JUDGE_STUB=1 for deterministic test mode (canned lessons based on input hash).
 // Retries API errors with exponential backoff (max 3 attempts).
 
