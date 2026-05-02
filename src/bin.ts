@@ -5,11 +5,14 @@ import { readFileSync } from "node:fs";
 import { runInit } from "./cli/init.js";
 import { runLessonsList, runLessonsShow } from "./cli/lessons.js";
 import { createProgram, type ParsedCommand } from "./cli.js";
+import { QUALITY_PRESETS } from "./config.js";
 import { getGitHubClient } from "./github/client.js";
 import { ingestHistory } from "./ingest/history.js";
 import { ingestPrReviews } from "./ingest/pr-reviews.js";
 import { ingestRules } from "./ingest/rules.js";
+import { MemoryAdapter } from "./memory/adapter.js";
 import { runReview } from "./review/run-review.js";
+import { runServe } from "./server/serve.js";
 import { expandTilde } from "./utils/expand-tilde.js";
 import { parseSinceDate } from "./utils/parse-since-date.js";
 
@@ -73,8 +76,18 @@ function executeCommand(cmd: ParsedCommand): void {
 			});
 			break;
 
+		case "serve":
+			executeServe(cmd).catch((err: unknown) => {
+				const message = err instanceof Error ? err.message : String(err);
+				process.stderr.write(`Error: ${message}\n`);
+				process.exit(1);
+			});
+			break;
+
 		default:
-			process.stderr.write(`Subcommand "${cmd.command}" is not yet implemented.\n`);
+			process.stderr.write(
+				`Subcommand "${(cmd as { command: string }).command}" is not yet implemented.\n`,
+			);
 			process.exit(1);
 	}
 }
@@ -350,6 +363,39 @@ async function executeReview(cmd: Extract<ParsedCommand, { command: "review" }>)
 	if (result.commentCount === 0 && result.hunkCount > 0) {
 		process.stderr.write("Note: no relevant lessons found.\n");
 	}
+}
+
+/** Execute the serve command (async, long-running). */
+async function executeServe(cmd: Extract<ParsedCommand, { command: "serve" }>): Promise<void> {
+	const memoryDir = cmd.memoryDir ?? `~/.remnic-codereview/local__rules`;
+	const resolvedMemoryDir = expandTilde(memoryDir);
+
+	// Determine model defaults from quality preset
+	const preset = QUALITY_PRESETS[cmd.quality] ?? QUALITY_PRESETS.default;
+	if (!preset) {
+		process.stderr.write(`Error: Invalid quality preset: ${cmd.quality}\n`);
+		process.exit(1);
+	}
+	const modelDefaults = {
+		extraction: process.env.OPENAI_EXTRACTION_MODEL ?? preset.extraction,
+		judge: process.env.OPENAI_JUDGE_MODEL ?? preset.judge,
+		embed: process.env.OPENAI_EMBED_MODEL ?? preset.embed,
+	};
+
+	// Create the memory adapter
+	const adapter = await MemoryAdapter.fromConfig({
+		memory_dir: resolvedMemoryDir,
+		owner: "local",
+		repo: "rules",
+	});
+
+	await runServe({
+		adapter,
+		version: getVersion(),
+		modelDefaults,
+		port: cmd.port,
+		memoryDir: resolvedMemoryDir,
+	});
 }
 
 const program = createProgram({

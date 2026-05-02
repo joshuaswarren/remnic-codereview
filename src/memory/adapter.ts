@@ -318,6 +318,21 @@ export class MemoryAdapter {
 	}
 
 	/**
+	 * Get a single review by ID. Returns null if not found.
+	 */
+	async getReview(id: string): Promise<PostedReview | null> {
+		this.assertNotClosed();
+		const filePath = join(this.reviewsDir, `${id}.json`);
+		try {
+			const raw = readFileSync(filePath, "utf-8");
+			const parsed = JSON.parse(raw) as StoredReview;
+			return parsed.review;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
 	 * List reviews with optional pagination.
 	 */
 	async listReviews(filter?: ReviewFilter): Promise<ListResult<PostedReview>> {
