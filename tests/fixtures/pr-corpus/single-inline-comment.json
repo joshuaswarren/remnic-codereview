@@ -1,0 +1,46 @@
+{
+  "prs": [
+    {
+      "number": 2,
+      "title": "Add feature X",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-03-20T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/2",
+      "user": { "login": "alice" },
+      "created_at": "2026-03-19T08:00:00Z",
+      "updated_at": "2026-03-20T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "feature-x" }
+    }
+  ],
+  "reviews": {
+    "2": []
+  },
+  "reviewComments": {
+    "2": [
+      {
+        "id": 2001,
+        "path": "src/storage.ts",
+        "original_line": 312,
+        "line": 315,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -310,5 +310,8 @@ function save() {\n+  const data = items.slice(-n);\n+  // potential bug: n could be 0\n+  return data;\n }",
+        "commit_id": "5849278fa1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "position": 5,
+        "original_position": 5,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": null,
+        "in_reply_to_id": null,
+        "user": { "login": "bob" },
+        "created_at": "2026-03-20T09:00:00Z",
+        "updated_at": "2026-03-20T09:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/2#discussion_r2001",
+        "body": "slice(-n) when n=0 returns empty array. Add a guard: `if (n <= 0) return items`"
+      }
+    ]
+  },
+  "issueComments": { "2": [] }
+}

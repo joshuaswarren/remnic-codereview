@@ -4,6 +4,7 @@
 // --help prints usage + exits 0. --version prints semver from package.json + exits 0.
 
 import { Command, InvalidArgumentError, Option } from "commander";
+import { coerceBool } from "./utils/coerce-bool.js";
 import { expandTilde } from "./utils/expand-tilde.js";
 
 // ─── Parsed result types ─────────────────────────────────────────────────────
@@ -37,6 +38,9 @@ export type ParsedCommand =
 			memoryDir: string | undefined;
 			quality: QualityPreset;
 			dryRun: boolean;
+			since: string | undefined;
+			maxPrs: number | undefined;
+			includeBots: boolean | undefined;
 	  }
 	| {
 			command: "lessons-list";
@@ -234,6 +238,21 @@ export function createProgram(opts: CreateProgramOptions): Command {
 				.choices(["default", "high", "cheap"])
 				.default("default"),
 		)
+		.option("--since <date>", "Only ingest PRs merged on or after this ISO 8601 date")
+		.option("--max-prs <n>", "Maximum number of PRs to ingest", parsePositiveInt)
+		.option(
+			"--include-bots <bool>",
+			"Include bot-authored comments (true/false)",
+			(value: string) => {
+				try {
+					return coerceBool(value);
+				} catch {
+					throw new InvalidArgumentError(
+						`Invalid --include-bots value: "${value}". Accepted values: true, false, 1, 0, yes, no, on, off`,
+					);
+				}
+			},
+		)
 		.action((cmdOpts) => {
 			const parentOpts = program.opts();
 			// If the subcommand quality was explicitly set to something other than
@@ -258,6 +277,9 @@ export function createProgram(opts: CreateProgramOptions): Command {
 				memoryDir,
 				quality,
 				dryRun: cmdOpts.dryRun ?? false,
+				since: cmdOpts.since,
+				maxPrs: cmdOpts.maxPrs,
+				includeBots: cmdOpts.includeBots as boolean | undefined,
 			});
 		});
 

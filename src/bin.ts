@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { runInit } from "./cli/init.js";
 import { runLessonsList, runLessonsShow } from "./cli/lessons.js";
 import { createProgram, type ParsedCommand } from "./cli.js";
+import { ingestPrReviews } from "./ingest/pr-reviews.js";
 import { ingestRules } from "./ingest/rules.js";
 import { expandTilde } from "./utils/expand-tilde.js";
 
@@ -82,8 +83,41 @@ async function executeIngest(cmd: Extract<ParsedCommand, { command: "ingest" }>)
 	}
 
 	if (cmd.prReviews) {
-		process.stderr.write("Error: --pr-reviews is not yet implemented.\n");
-		process.exit(1);
+		const slugParts = cmd.prReviews.split("/");
+		if (slugParts.length !== 2 || !slugParts[0] || !slugParts[1]) {
+			process.stderr.write(
+				`Error: Invalid slug: "${cmd.prReviews}". Expected <owner>/<repo> format.\n`,
+			);
+			process.exit(1);
+		}
+		const [owner, repo] = slugParts;
+		const includeBots = cmd.includeBots ?? false;
+		let since: Date | undefined;
+		if (cmd.since) {
+			since = new Date(cmd.since);
+			if (Number.isNaN(since.getTime())) {
+				process.stderr.write(
+					`Error: Invalid --since value: "${cmd.since}". Expected ISO 8601 date (e.g. 2026-01-01).\n`,
+				);
+				process.exit(1);
+			}
+		}
+		if (cmd.maxPrs !== undefined && cmd.maxPrs <= 0) {
+			process.stderr.write(`Error: --max-prs must be a positive integer, got: ${cmd.maxPrs}.\n`);
+			process.exit(1);
+		}
+		const result = await ingestPrReviews({
+			owner,
+			repo,
+			memoryDir: expandTilde(memoryDir),
+			quality: cmd.quality,
+			dryRun: cmd.dryRun,
+			includeBots,
+			since,
+			maxPrs: cmd.maxPrs,
+		});
+		process.stdout.write(`${result.stdout}\n`);
+		return;
 	}
 
 	if (cmd.history) {

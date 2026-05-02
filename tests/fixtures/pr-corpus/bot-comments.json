@@ -1,0 +1,126 @@
+{
+  "prs": [
+    {
+      "number": 5,
+      "title": "Automated dependency update",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-04-05T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/5",
+      "user": { "login": "dependabot[bot]" },
+      "created_at": "2026-04-04T08:00:00Z",
+      "updated_at": "2026-04-05T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "dependabot/update" }
+    }
+  ],
+  "reviews": {
+    "5": [
+      {
+        "id": 5001,
+        "state": "APPROVED",
+        "body": "LGTM from codeql perspective.",
+        "user": { "login": "codeql" },
+        "submitted_at": "2026-04-05T08:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/5#pullrequestreview-5001",
+        "pull_request_url": "https://github.com/acme/widgets/pull/5"
+      },
+      {
+        "id": 5002,
+        "state": "COMMENTED",
+        "body": "Human review: this looks safe.",
+        "user": { "login": "bob" },
+        "submitted_at": "2026-04-05T09:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/5#pullrequestreview-5002",
+        "pull_request_url": "https://github.com/acme/widgets/pull/5"
+      }
+    ]
+  },
+  "reviewComments": {
+    "5": [
+      {
+        "id": 5003,
+        "path": "package.json",
+        "original_line": 10,
+        "line": 10,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -8,3 +8,3 @@\n   \"express\": \"^5.0.0\",\n-  \"lodash\": \"^4.17.20\",\n+  \"lodash\": \"^4.17.21\",\n }",
+        "commit_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "position": 1,
+        "original_position": 1,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": null,
+        "in_reply_to_id": null,
+        "user": { "login": "chatgpt-codex-connector[bot]" },
+        "created_at": "2026-04-05T08:30:00Z",
+        "updated_at": "2026-04-05T08:30:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/5#discussion_r5003",
+        "body": "Dependency update looks fine."
+      },
+      {
+        "id": 5004,
+        "path": "package.json",
+        "original_line": 10,
+        "line": 10,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -8,3 +8,3 @@\n   \"express\": \"^5.0.0\",\n-  \"lodash\": \"^4.17.20\",\n+  \"lodash\": \"^4.17.21\",\n }",
+        "commit_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "position": 1,
+        "original_position": 1,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": null,
+        "in_reply_to_id": null,
+        "user": { "login": "cursor[bot]" },
+        "created_at": "2026-04-05T08:40:00Z",
+        "updated_at": "2026-04-05T08:40:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/5#discussion_r5004",
+        "body": "No breaking changes."
+      },
+      {
+        "id": 5005,
+        "path": "package.json",
+        "original_line": 10,
+        "line": 10,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -8,3 +8,3 @@\n   \"express\": \"^5.0.0\",\n-  \"lodash\": \"^4.17.20\",\n+  \"lodash\": \"^4.17.21\",\n }",
+        "commit_id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "position": 1,
+        "original_position": 1,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": null,
+        "in_reply_to_id": null,
+        "user": { "login": "bob" },
+        "created_at": "2026-04-05T09:00:00Z",
+        "updated_at": "2026-04-05T09:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/5#discussion_r5005",
+        "body": "This patch bump is safe."
+      }
+    ]
+  },
+  "issueComments": {
+    "5": [
+      {
+        "id": 5006,
+        "body": "Auto-merged by dependabot.",
+        "user": { "login": "dependabot[bot]" },
+        "created_at": "2026-04-05T07:00:00Z",
+        "updated_at": "2026-04-05T07:00:00Z",
+        "html_url": "https://github.com/acme/widgets/issues/5#issuecomment-5006"
+      },
+      {
+        "id": 5007,
+        "body": "Thanks for the update!",
+        "user": { "login": "github-actions[bot]" },
+        "created_at": "2026-04-05T07:30:00Z",
+        "updated_at": "2026-04-05T07:30:00Z",
+        "html_url": "https://github.com/acme/widgets/issues/5#issuecomment-5007"
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "prs": [
+    { "number": 30, "title": "PR 1", "state": "closed", "merged": true, "merged_at": "2026-04-01T10:00:00Z", "html_url": "https://github.com/acme/widgets/pull/30", "user": { "login": "alice" }, "created_at": "2026-03-31T08:00:00Z", "updated_at": "2026-04-01T10:00:00Z", "base": { "ref": "main" }, "head": { "ref": "pr1" } },
+    { "number": 31, "title": "PR 2", "state": "closed", "merged": true, "merged_at": "2026-04-02T10:00:00Z", "html_url": "https://github.com/acme/widgets/pull/31", "user": { "login": "alice" }, "created_at": "2026-04-01T08:00:00Z", "updated_at": "2026-04-02T10:00:00Z", "base": { "ref": "main" }, "head": { "ref": "pr2" } },
+    { "number": 32, "title": "PR 3", "state": "closed", "merged": true, "merged_at": "2026-04-03T10:00:00Z", "html_url": "https://github.com/acme/widgets/pull/32", "user": { "login": "alice" }, "created_at": "2026-04-02T08:00:00Z", "updated_at": "2026-04-03T10:00:00Z", "base": { "ref": "main" }, "head": { "ref": "pr3" } },
+    { "number": 33, "title": "PR 4", "state": "closed", "merged": true, "merged_at": "2026-04-04T10:00:00Z", "html_url": "https://github.com/acme/widgets/pull/33", "user": { "login": "alice" }, "created_at": "2026-04-03T08:00:00Z", "updated_at": "2026-04-04T10:00:00Z", "base": { "ref": "main" }, "head": { "ref": "pr4" } },
+    { "number": 34, "title": "PR 5", "state": "closed", "merged": true, "merged_at": "2026-04-05T10:00:00Z", "html_url": "https://github.com/acme/widgets/pull/34", "user": { "login": "alice" }, "created_at": "2026-04-04T08:00:00Z", "updated_at": "2026-04-05T10:00:00Z", "base": { "ref": "main" }, "head": { "ref": "pr5" } }
+  ],
+  "reviews": {
+    "30": [{ "id": 30001, "state": "APPROVED", "body": "Review 1", "user": { "login": "bob" }, "submitted_at": "2026-04-01T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/30#pullrequestreview-30001", "pull_request_url": "https://github.com/acme/widgets/pull/30" }],
+    "31": [{ "id": 31001, "state": "APPROVED", "body": "Review 2", "user": { "login": "bob" }, "submitted_at": "2026-04-02T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/31#pullrequestreview-31001", "pull_request_url": "https://github.com/acme/widgets/pull/31" }],
+    "32": [{ "id": 32001, "state": "APPROVED", "body": "Review 3", "user": { "login": "bob" }, "submitted_at": "2026-04-03T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/32#pullrequestreview-32001", "pull_request_url": "https://github.com/acme/widgets/pull/32" }],
+    "33": [{ "id": 33001, "state": "APPROVED", "body": "Review 4", "user": { "login": "bob" }, "submitted_at": "2026-04-04T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/33#pullrequestreview-33001", "pull_request_url": "https://github.com/acme/widgets/pull/33" }],
+    "34": [{ "id": 34001, "state": "APPROVED", "body": "Review 5", "user": { "login": "bob" }, "submitted_at": "2026-04-05T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/34#pullrequestreview-34001", "pull_request_url": "https://github.com/acme/widgets/pull/34" }]
+  },
+  "reviewComments": { "30": [], "31": [], "32": [], "33": [], "34": [] },
+  "issueComments": { "30": [], "31": [], "32": [], "33": [], "34": [] }
+}

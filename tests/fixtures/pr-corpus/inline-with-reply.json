@@ -1,0 +1,65 @@
+{
+  "prs": [
+    {
+      "number": 3,
+      "title": "Fix null pointer in parser",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-03-25T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/3",
+      "user": { "login": "alice" },
+      "created_at": "2026-03-24T08:00:00Z",
+      "updated_at": "2026-03-25T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "fix-parser" }
+    }
+  ],
+  "reviews": { "3": [] },
+  "reviewComments": {
+    "3": [
+      {
+        "id": 3001,
+        "path": "src/parser.ts",
+        "original_line": 42,
+        "line": 42,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -40,3 +40,4 @@ function parse(input: string) {\n   const result = JSON.parse(input);\n+  // missing null check\n   return result.value;\n }",
+        "commit_id": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+        "position": 3,
+        "original_position": 3,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": null,
+        "in_reply_to_id": null,
+        "user": { "login": "bob" },
+        "created_at": "2026-03-25T09:00:00Z",
+        "updated_at": "2026-03-25T09:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/3#discussion_r3001",
+        "body": "What happens if input is null?"
+      },
+      {
+        "id": 3002,
+        "path": "src/parser.ts",
+        "original_line": 42,
+        "line": 42,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -40,3 +40,4 @@ function parse(input: string) {\n   const result = JSON.parse(input);\n+  // missing null check\n   return result.value;\n }",
+        "commit_id": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+        "position": 3,
+        "original_position": 3,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": null,
+        "in_reply_to_id": 3001,
+        "user": { "login": "alice" },
+        "created_at": "2026-03-25T09:30:00Z",
+        "updated_at": "2026-03-25T09:30:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/3#discussion_r3002",
+        "body": "Good catch! I'll add a null guard."
+      }
+    ]
+  },
+  "issueComments": { "3": [] }
+}

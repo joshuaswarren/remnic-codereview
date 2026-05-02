@@ -1,0 +1,32 @@
+{
+  "prs": [
+    {
+      "number": 1,
+      "title": "Fix bug in storage",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-03-15T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/1",
+      "user": { "login": "alice" },
+      "created_at": "2026-03-14T08:00:00Z",
+      "updated_at": "2026-03-15T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "fix-bug" }
+    }
+  ],
+  "reviews": {
+    "1": [
+      {
+        "id": 1001,
+        "state": "COMMENTED",
+        "body": "This looks good but consider using a guard clause.",
+        "user": { "login": "bob" },
+        "submitted_at": "2026-03-15T09:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/1#pullrequestreview-1001",
+        "pull_request_url": "https://github.com/acme/widgets/pull/1"
+      }
+    ]
+  },
+  "reviewComments": { "1": [] },
+  "issueComments": { "1": [] }
+}

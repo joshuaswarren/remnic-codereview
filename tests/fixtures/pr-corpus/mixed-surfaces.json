@@ -1,0 +1,109 @@
+{
+  "prs": [
+    {
+      "number": 10,
+      "title": "Fix multiple issues",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-04-10T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/10",
+      "user": { "login": "alice" },
+      "created_at": "2026-04-09T08:00:00Z",
+      "updated_at": "2026-04-10T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "fix-multiple" }
+    }
+  ],
+  "reviews": {
+    "10": [
+      {
+        "id": 10001,
+        "state": "CHANGES_REQUESTED",
+        "body": "Several issues found. Please address before merging.",
+        "user": { "login": "bob" },
+        "submitted_at": "2026-04-10T09:00:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/10#pullrequestreview-10001",
+        "pull_request_url": "https://github.com/acme/widgets/pull/10"
+      }
+    ]
+  },
+  "reviewComments": {
+    "10": [
+      {
+        "id": 10010,
+        "path": "src/storage.ts",
+        "original_line": 50,
+        "line": 50,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -48,3 +48,4 @@ export function save(data: unknown) {\n   if (!data) return;\n+  fs.writeFileSync(path, JSON.stringify(data));\n }",
+        "commit_id": "c0d0e0f0a0b0c0d0e0f0a0b0c0d0e0f0a0b0c0d0",
+        "position": 2,
+        "original_position": 2,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": 10001,
+        "in_reply_to_id": null,
+        "user": { "login": "bob" },
+        "created_at": "2026-04-10T09:10:00Z",
+        "updated_at": "2026-04-10T09:10:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/10#discussion_r10010",
+        "body": "Use atomic write (tmp + rename) instead of direct writeSync."
+      },
+      {
+        "id": 10011,
+        "path": "src/storage.ts",
+        "original_line": 55,
+        "line": 57,
+        "original_start_line": 55,
+        "start_line": 55,
+        "diff_hunk": "@@ -53,3 +53,5 @@ export function save(data: unknown) {\n-  return items.slice(-n);\n+  if (n <= 0) return items;\n+  return items.slice(-n);\n }",
+        "commit_id": "c0d0e0f0a0b0c0d0e0f0a0b0c0d0e0f0a0b0c0d0",
+        "position": 4,
+        "original_position": 4,
+        "side": "RIGHT",
+        "start_side": "RIGHT",
+        "pull_request_review_id": 10001,
+        "in_reply_to_id": null,
+        "user": { "login": "bob" },
+        "created_at": "2026-04-10T09:15:00Z",
+        "updated_at": "2026-04-10T09:15:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/10#discussion_r10011",
+        "body": "Multi-line: good guard. Also apply to the other slice call on line 60."
+      },
+      {
+        "id": 10012,
+        "path": "src/storage.ts",
+        "original_line": 57,
+        "line": 57,
+        "original_start_line": null,
+        "start_line": null,
+        "diff_hunk": "@@ -53,3 +53,5 @@ export function save(data: unknown) {\n-  return items.slice(-n);\n+  if (n <= 0) return items;\n+  return items.slice(-n);\n }",
+        "commit_id": "c0d0e0f0a0b0c0d0e0f0a0b0c0d0e0f0a0b0c0d0",
+        "position": 4,
+        "original_position": 4,
+        "side": "RIGHT",
+        "start_side": null,
+        "pull_request_review_id": 10001,
+        "in_reply_to_id": 10011,
+        "user": { "login": "alice" },
+        "created_at": "2026-04-10T09:30:00Z",
+        "updated_at": "2026-04-10T09:30:00Z",
+        "html_url": "https://github.com/acme/widgets/pull/10#discussion_r10012",
+        "body": "Done! Added the guard to both places."
+      }
+    ]
+  },
+  "issueComments": {
+    "10": [
+      {
+        "id": 10020,
+        "body": "Overall this looks much better now. Just the atomic write left to address.",
+        "user": { "login": "charlie" },
+        "created_at": "2026-04-10T09:45:00Z",
+        "updated_at": "2026-04-10T09:45:00Z",
+        "html_url": "https://github.com/acme/widgets/issues/10#issuecomment-10020"
+      }
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "prs": [
+    {
+      "number": 20,
+      "title": "Old PR",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-01-15T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/20",
+      "user": { "login": "alice" },
+      "created_at": "2026-01-14T08:00:00Z",
+      "updated_at": "2026-01-15T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "old-pr" }
+    },
+    {
+      "number": 21,
+      "title": "Medium PR",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-02-15T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/21",
+      "user": { "login": "alice" },
+      "created_at": "2026-02-14T08:00:00Z",
+      "updated_at": "2026-02-15T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "medium-pr" }
+    },
+    {
+      "number": 22,
+      "title": "Recent PR",
+      "state": "closed",
+      "merged": true,
+      "merged_at": "2026-03-15T10:00:00Z",
+      "html_url": "https://github.com/acme/widgets/pull/22",
+      "user": { "login": "alice" },
+      "created_at": "2026-03-14T08:00:00Z",
+      "updated_at": "2026-03-15T10:00:00Z",
+      "base": { "ref": "main" },
+      "head": { "ref": "recent-pr" }
+    }
+  ],
+  "reviews": {
+    "20": [{ "id": 20001, "state": "APPROVED", "body": "Old review", "user": { "login": "bob" }, "submitted_at": "2026-01-15T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/20#pullrequestreview-20001", "pull_request_url": "https://github.com/acme/widgets/pull/20" }],
+    "21": [{ "id": 21001, "state": "COMMENTED", "body": "Medium review", "user": { "login": "bob" }, "submitted_at": "2026-02-15T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/21#pullrequestreview-21001", "pull_request_url": "https://github.com/acme/widgets/pull/21" }],
+    "22": [{ "id": 22001, "state": "COMMENTED", "body": "Recent review", "user": { "login": "bob" }, "submitted_at": "2026-03-15T09:00:00Z", "html_url": "https://github.com/acme/widgets/pull/22#pullrequestreview-22001", "pull_request_url": "https://github.com/acme/widgets/pull/22" }]
+  },
+  "reviewComments": { "20": [], "21": [], "22": [] },
+  "issueComments": { "20": [], "21": [], "22": [] }
+}
