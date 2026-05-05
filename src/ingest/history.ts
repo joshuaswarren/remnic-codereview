@@ -267,15 +267,15 @@ async function ingestChangelog(
 			lesson.original_incident_date = entry.date;
 			if (!lesson.tags.includes("changelog")) lesson.tags.push("changelog");
 
-			stats.changelog++;
-
 			if (dryRun) {
+				stats.changelog++;
 				allLessons.push(lesson);
 			} else if (adapter) {
 				const result = await adapter.storeLesson(lesson);
 				if (result.deduped) {
 					stats.lessons_skipped_dedup++;
 				} else {
+					stats.changelog++;
 					stats.lessons_added++;
 					cap.addedCount++;
 					allLessons.push(lesson);
@@ -338,15 +338,15 @@ async function ingestAdrs(
 			lesson.original_incident_date = date;
 			if (!lesson.tags.includes("adr")) lesson.tags.push("adr");
 
-			stats.adr++;
-
 			if (dryRun) {
+				stats.adr++;
 				allLessons.push(lesson);
 			} else if (adapter) {
 				const result = await adapter.storeLesson(lesson);
 				if (result.deduped) {
 					stats.lessons_skipped_dedup++;
 				} else {
+					stats.adr++;
 					stats.lessons_added++;
 					cap.addedCount++;
 					allLessons.push(lesson);
@@ -411,15 +411,15 @@ async function ingestPostMortems(
 			lesson.original_incident_date = date;
 			if (!lesson.tags.includes("post-mortem")) lesson.tags.push("post-mortem");
 
-			stats.post_mortem++;
-
 			if (dryRun) {
+				stats.post_mortem++;
 				allLessons.push(lesson);
 			} else if (adapter) {
 				const result = await adapter.storeLesson(lesson);
 				if (result.deduped) {
 					stats.lessons_skipped_dedup++;
 				} else {
+					stats.post_mortem++;
 					stats.lessons_added++;
 					cap.addedCount++;
 					allLessons.push(lesson);
@@ -493,15 +493,15 @@ async function ingestClosedIssues(
 				lesson.severity = severity as "critical" | "high" | "medium" | "low" | "info";
 			}
 
-			stats.closed_issue++;
-
 			if (dryRun) {
+				stats.closed_issue++;
 				allLessons.push(lesson);
 			} else if (adapter) {
 				const result = await adapter.storeLesson(lesson);
 				if (result.deduped) {
 					stats.lessons_skipped_dedup++;
 				} else {
+					stats.closed_issue++;
 					stats.lessons_added++;
 					cap.addedCount++;
 					allLessons.push(lesson);
@@ -588,15 +588,15 @@ async function ingestGitCommits(
 				}
 				if (!lesson.tags.includes("fix-commit")) lesson.tags.push("fix-commit");
 
-				stats.fix_commit++;
-
 				if (dryRun) {
+					stats.fix_commit++;
 					allLessons.push(lesson);
 				} else if (adapter) {
 					const result = await adapter.storeLesson(lesson);
 					if (result.deduped) {
 						stats.lessons_skipped_dedup++;
 					} else {
+						stats.fix_commit++;
 						stats.lessons_added++;
 						cap.addedCount++;
 						allLessons.push(lesson);

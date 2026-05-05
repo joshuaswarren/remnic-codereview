@@ -5,10 +5,13 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import express from "express";
+import type { QualityPreset } from "../cli.js";
+import type { GitHubClientLike } from "../ingest/pr-reviews.js";
 import type { MemoryAdapter } from "../memory/adapter.js";
 import { healthRouter } from "./routes/health.js";
 import { lessonsRouter } from "./routes/lessons.js";
 import { reviewsRouter } from "./routes/reviews.js";
+import { webhooksRouter } from "./routes/webhooks.js";
 
 /** Configuration for creating the Express app. */
 export interface AppOptions {
@@ -19,6 +22,9 @@ export interface AppOptions {
 		judge: string;
 		embed: string;
 	};
+	memoryDir?: string;
+	quality?: QualityPreset;
+	githubClient?: GitHubClientLike;
 }
 
 /** Standard error response shape for all API errors. */
@@ -53,7 +59,7 @@ export function createApp(opts: AppOptions): express.Express {
 
 			if (isAllowed) {
 				res.setHeader("Access-Control-Allow-Origin", origin);
-				res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+				res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 				res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 			}
 			// If not allowed, we simply don't set CORS headers — browser will block
@@ -72,6 +78,14 @@ export function createApp(opts: AppOptions): express.Express {
 	app.use("/api/health", healthRouter(opts));
 	app.use("/api/lessons", lessonsRouter(opts.adapter));
 	app.use("/api/reviews", reviewsRouter(opts.adapter));
+	app.use(
+		"/api/webhooks",
+		webhooksRouter({
+			memoryDir: opts.memoryDir,
+			quality: opts.quality,
+			githubClient: opts.githubClient,
+		}),
+	);
 
 	// ─── 404 for unmatched /api/* routes ───────────────────────────────────
 	app.use("/api", (_req, res) => {

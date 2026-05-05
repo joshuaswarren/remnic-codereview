@@ -70,6 +70,19 @@ node dist/cli.js ingest --history owner/repo
 node dist/cli.js ingest --all owner/repo
 ```
 
+### Incremental ingestion webhook
+
+Run the server and point a GitHub `pull_request` webhook at `/api/webhooks/github`.
+When GitHub sends a `closed` event for a merged PR, the server ingests that PR's
+review surfaces into the same memory store.
+
+```bash
+node dist/cli.js serve --memory-dir ~/.remnic-codereview/owner__repo
+
+# Webhook URL:
+# https://your-host.example/api/webhooks/github
+```
+
 ### Review a pull request
 
 ```bash
@@ -135,7 +148,7 @@ The system has three layers connected through a shared memory adapter:
   │ • rules     │  │ 1. fetch diff │  │ GET /api/health      │
   │ • pr-review │  │ 2. chunk hunk │  │ GET /api/lessons     │
   │ • history   │  │ 3. recall     │  │ GET /api/reviews     │
-  │             │  │ 4. judge (AI) │  │                      │
+  │ • webhook   │  │ 4. judge (AI) │  │ POST /api/webhooks   │
   │             │  │ 5. compose    │  │ + static dashboard   │
   │             │  │ 6. post       │  │   (React/Tailwind)   │
   └──────┬──────┘  └───────┬───────┘  └──────────┬──────────┘

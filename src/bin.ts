@@ -395,6 +395,7 @@ async function executeServe(cmd: Extract<ParsedCommand, { command: "serve" }>): 
 		modelDefaults,
 		port: cmd.port,
 		memoryDir: resolvedMemoryDir,
+		quality: cmd.quality,
 	});
 }
 

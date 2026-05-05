@@ -7,6 +7,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after, before, describe, it, mock } from "node:test";
 import request from "supertest";
+import type { GitHubClientLike } from "../ingest/pr-reviews.js";
 import type { MemoryAdapter } from "../memory/adapter.js";
 import type { Lesson } from "../schemas/lesson.js";
 import type { PostedReview } from "../schemas/posted-review.js";
@@ -148,6 +149,42 @@ function createMockAdapter(lessons: Lesson[] = [], reviews: PostedReview[] = [])
 	} as unknown as MemoryAdapter;
 
 	return adapter;
+}
+
+interface TestGitHubClient extends GitHubClientLike {
+	calls: {
+		listReviews: number;
+	};
+}
+
+function createMockGitHubClient(): TestGitHubClient {
+	const client: TestGitHubClient = {
+		calls: { listReviews: 0 },
+		async listPRs() {
+			return [];
+		},
+		async listReviews() {
+			client.calls.listReviews++;
+			return [
+				{
+					id: 1001,
+					state: "COMMENTED",
+					body: "Guard slice(-n) when count can be zero.",
+					user: { login: "reviewer" },
+					submitted_at: "2026-04-15T10:30:00Z",
+					html_url: "https://github.com/acme/widgets/pull/42#pullrequestreview-1001",
+				},
+			];
+		},
+		async listReviewComments() {
+			return [];
+		},
+		async listIssueComments() {
+			return [];
+		},
+	};
+
+	return client;
 }
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
@@ -710,6 +747,95 @@ describe("Express server", () => {
 			});
 			const res = await request(app).get("/api/lessons").set("Origin", "http://localhost:4317");
 			assert.equal(res.status, 200);
+		});
+	});
+
+	describe("POST /api/webhooks/github", () => {
+		it("ingests a merged pull_request event into the memory store", async () => {
+			const previousStub = process.env.OPENAI_JUDGE_STUB;
+			process.env.OPENAI_JUDGE_STUB = "1";
+			try {
+				const memoryDir = join(tmpDir, `webhook-${Date.now()}`);
+				const githubClient = createMockGitHubClient();
+				const adapter = createMockAdapter();
+				const app = createApp({
+					adapter,
+					version: "0.1.0",
+					modelDefaults: {
+						extraction: "gpt-5.4-mini",
+						judge: "gpt-5.4-nano",
+						embed: "text-embedding-3-small",
+					},
+					memoryDir,
+					quality: "default",
+					githubClient,
+				});
+
+				const res = await request(app)
+					.post("/api/webhooks/github")
+					.set("X-GitHub-Event", "pull_request")
+					.send({
+						action: "closed",
+						repository: { full_name: "acme/widgets" },
+						pull_request: {
+							number: 42,
+							title: "Fix storage bug",
+							state: "closed",
+							merged: true,
+							merged_at: "2026-04-20T12:00:00Z",
+							html_url: "https://github.com/acme/widgets/pull/42",
+							user: { login: "author" },
+							created_at: "2026-04-19T12:00:00Z",
+							updated_at: "2026-04-20T12:00:00Z",
+						},
+					});
+
+				assert.equal(res.status, 200);
+				assert.equal(res.body.status, "ok");
+				assert.equal(res.body.pr_number, 42);
+				assert.equal(res.body.stats.prs_scanned, 1);
+				assert.ok(res.body.stats.lessons_added >= 1);
+				assert.equal(githubClient.calls.listReviews, 1);
+			} finally {
+				if (previousStub === undefined) {
+					delete process.env.OPENAI_JUDGE_STUB;
+				} else {
+					process.env.OPENAI_JUDGE_STUB = previousStub;
+				}
+			}
+		});
+
+		it("ignores unmerged pull_request events", async () => {
+			const githubClient = createMockGitHubClient();
+			const adapter = createMockAdapter();
+			const app = createApp({
+				adapter,
+				version: "0.1.0",
+				modelDefaults: {
+					extraction: "gpt-5.4-mini",
+					judge: "gpt-5.4-nano",
+					embed: "text-embedding-3-small",
+				},
+				memoryDir: join(tmpDir, `webhook-ignored-${Date.now()}`),
+				githubClient,
+			});
+
+			const res = await request(app)
+				.post("/api/webhooks/github")
+				.set("X-GitHub-Event", "pull_request")
+				.send({
+					action: "closed",
+					repository: { full_name: "acme/widgets" },
+					pull_request: {
+						number: 42,
+						merged: false,
+						merged_at: null,
+					},
+				});
+
+			assert.equal(res.status, 202);
+			assert.equal(res.body.status, "ignored");
+			assert.equal(githubClient.calls.listReviews, 0);
 		});
 	});
 

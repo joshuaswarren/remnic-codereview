@@ -4,7 +4,8 @@
 // Uses a mock GitHub client for closed issues.
 
 import * as assert from "node:assert/strict";
-import { mkdirSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { appendFileSync, cpSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
 import type { QualityPreset } from "../cli.js";
@@ -12,6 +13,7 @@ import type { QualityPreset } from "../cli.js";
 // ── Test fixtures path ───────────────────────────────────────────────────────
 
 const FIXTURE_PATH = join(import.meta.dirname ?? ".", "../../tests/fixtures/history-corpus");
+let preparedFixturePath: string | undefined;
 
 /** Create a temp memory dir for a test. */
 function tempDir(name: string): string {
@@ -27,6 +29,82 @@ function cleanupDir(dir: string): void {
 	} catch {
 		// ignore
 	}
+}
+
+/** Run a git command in the generated history fixture. */
+function git(cwd: string, args: string[], date?: string): void {
+	execFileSync("git", args, {
+		cwd,
+		env: {
+			...process.env,
+			GIT_AUTHOR_DATE: date ?? "2026-03-01T00:00:00Z",
+			GIT_COMMITTER_DATE: date ?? "2026-03-01T00:00:00Z",
+		},
+		stdio: "ignore",
+	});
+}
+
+/** Create a portable fixture repo with deterministic git history. */
+function createHistoryRepoFixture(): string {
+	const dir = tempDir("history-corpus");
+	cpSync(FIXTURE_PATH, dir, {
+		recursive: true,
+		filter: (src) => !src.split("/").includes(".git"),
+	});
+
+	git(dir, ["init"]);
+	git(dir, ["add", "."]);
+	git(
+		dir,
+		["-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", "initial commit"],
+		"2026-03-01T00:00:00Z",
+	);
+
+	const commits: Array<{ message: string; date: string; line: string }> = [
+		{
+			message: "fix(storage): prevent data loss on rename",
+			date: "2026-03-20T10:00:00Z",
+			line: "\nFixture note: storage rename fix.\n",
+		},
+		{
+			message: "revert: fix(storage): prevent data loss on rename",
+			date: "2026-03-25T12:00:00Z",
+			line: "Fixture note: revert storage rename fix.\n",
+		},
+		{
+			message: "bug(auth): token leak in logs",
+			date: "2026-04-05T09:00:00Z",
+			line: "Fixture note: auth token leak bug.\n",
+		},
+		{
+			message: "feat: add new feature",
+			date: "2026-04-08T14:00:00Z",
+			line: "Fixture note: non-fix feature commit.\n",
+		},
+		{
+			message: "Merge pull request #42 from feature-branch",
+			date: "2026-04-09T10:00:00Z",
+			line: "Fixture note: merge-like commit message.\n",
+		},
+	];
+
+	for (const commit of commits) {
+		appendFileSync(join(dir, "README.md"), commit.line);
+		git(dir, ["add", "README.md"]);
+		git(
+			dir,
+			["-c", "user.name=Test", "-c", "user.email=test@test.com", "commit", "-m", commit.message],
+			commit.date,
+		);
+	}
+
+	return dir;
+}
+
+/** Return a per-test-run fixture repo path. */
+function historyFixturePath(): string {
+	preparedFixturePath ??= createHistoryRepoFixture();
+	return preparedFixturePath;
 }
 
 /** Build standard history ingest options. */
@@ -145,13 +223,14 @@ describe("history ingestion", () => {
 			cleanupDir(dir);
 		}
 		tempDirs.length = 0;
+		preparedFixturePath = undefined;
 	});
 
 	// ── CHANGELOG ──────────────────────────────────────────────────────────
 
 	it("CHANGELOG entry produces a changelog Lesson", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("changelog", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("changelog", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 		assert.ok(result.stats.changelog >= 1, "Expected at least 1 changelog lesson");
@@ -189,7 +268,7 @@ describe("history ingestion", () => {
 
 	it("ADR file produces an adr Lesson", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("adr", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("adr", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 		assert.ok(result.stats.adr >= 1, "Expected at least 1 ADR lesson");
@@ -206,7 +285,7 @@ describe("history ingestion", () => {
 
 	it("ADR file with no front-matter still produces a lesson", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("adr-no-fm", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("adr-no-fm", historyFixturePath()));
 
 		assert.ok(result.stats.adr >= 2, "Expected at least 2 ADR lessons from both files");
 	});
@@ -215,7 +294,7 @@ describe("history ingestion", () => {
 
 	it("Post-mortem produces a post_mortem Lesson", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("postmortem", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("postmortem", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 		assert.ok(result.stats.post_mortem >= 1, "Expected at least 1 post_mortem lesson");
@@ -228,7 +307,7 @@ describe("history ingestion", () => {
 
 	it("Closed bug issue produces a closed_issue Lesson with bug tag", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const opts = makeOpts("closed-bug", FIXTURE_PATH);
+		const opts = makeOpts("closed-bug", historyFixturePath());
 		const mockClient = createMockGitHubClient(createMockIssues());
 		const result = await ingestHistory(opts, mockClient);
 
@@ -243,7 +322,7 @@ describe("history ingestion", () => {
 
 	it("Closed security issue produces a closed_issue Lesson with severity >= high", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const opts = makeOpts("closed-security", FIXTURE_PATH);
+		const opts = makeOpts("closed-security", historyFixturePath());
 		const mockClient = createMockGitHubClient(createMockIssues());
 		const result = await ingestHistory(opts, mockClient);
 
@@ -264,7 +343,7 @@ describe("history ingestion", () => {
 
 	it("Closed issue with empty body produces a lesson using title", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const opts = makeOpts("empty-body-issue", FIXTURE_PATH);
+		const opts = makeOpts("empty-body-issue", historyFixturePath());
 		const mockClient = createMockGitHubClient(createMockIssues());
 		const result = await ingestHistory(opts, mockClient);
 
@@ -282,7 +361,7 @@ describe("history ingestion", () => {
 
 	it("fix: commit produces a fix_commit Lesson", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("fix-commit", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("fix-commit", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 		assert.ok(result.stats.fix_commit >= 1, "Expected at least 1 fix_commit lesson");
@@ -296,7 +375,7 @@ describe("history ingestion", () => {
 
 	it("revert: commit produces a fix_commit Lesson with revert tag", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("revert-commit", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("revert-commit", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 
@@ -308,7 +387,7 @@ describe("history ingestion", () => {
 
 	it("bug: commit produces a fix_commit Lesson", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("bug-commit", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("bug-commit", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 
@@ -320,7 +399,7 @@ describe("history ingestion", () => {
 
 	it("Merge-commit messages are skipped", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("merge-skip", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("merge-skip", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 
@@ -335,7 +414,7 @@ describe("history ingestion", () => {
 
 	it("Stats report breakdown by source_kind", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("stats", FIXTURE_PATH));
+		const result = await ingestHistory(makeOpts("stats", historyFixturePath()));
 
 		assert.equal(result.exitCode, 0);
 
@@ -361,7 +440,7 @@ describe("history ingestion", () => {
 	it("--since excludes older entries", async () => {
 		const { ingestHistory } = await import("./history.js");
 		const result = await ingestHistory(
-			makeOpts("since", FIXTURE_PATH, {
+			makeOpts("since", historyFixturePath(), {
 				since: new Date("2026-04-01"),
 			}),
 		);
@@ -381,7 +460,7 @@ describe("history ingestion", () => {
 
 	it("--max caps total lessons", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const result = await ingestHistory(makeOpts("max", FIXTURE_PATH, { max: 3 }));
+		const result = await ingestHistory(makeOpts("max", historyFixturePath(), { max: 3 }));
 
 		assert.equal(result.exitCode, 0);
 		assert.ok(
@@ -392,7 +471,7 @@ describe("history ingestion", () => {
 
 	it("--dry-run does not write to memory dir", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const opts = makeOpts("dryrun", FIXTURE_PATH, { dryRun: true });
+		const opts = makeOpts("dryrun", historyFixturePath(), { dryRun: true });
 		const result = await ingestHistory(opts);
 
 		assert.equal(result.exitCode, 0);
@@ -412,7 +491,7 @@ describe("history ingestion", () => {
 
 	it("Idempotent on re-run", async () => {
 		const { ingestHistory } = await import("./history.js");
-		const opts = makeOpts("idempotent", FIXTURE_PATH);
+		const opts = makeOpts("idempotent", historyFixturePath());
 
 		const result1 = await ingestHistory(opts);
 		assert.equal(result1.exitCode, 0);
