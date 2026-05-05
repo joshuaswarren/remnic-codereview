@@ -18,7 +18,8 @@
     "test-unit": "tsx --test --test-concurrency=10 'src/**/*.test.ts'",
     "lint": "biome check .",
     "lint-fix": "biome check --write .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "demo:video": "node scripts/render-challenge-demo.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.0.0",

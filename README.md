@@ -115,6 +115,19 @@ node dist/cli.js serve
 # Then open http://localhost:4317/
 ```
 
+### Challenge demo
+
+```bash
+# Written submission
+open docs/CHALLENGE_SUBMISSION.md
+
+# Static web demo
+open docs/challenge-demo/index.html
+
+# Re-render the demo clip
+pnpm demo:video
+```
+
 ## Why AI was necessary
 
 Code review is fundamentally a knowledge-transfer problem. Senior engineers internalize patterns, anti-patterns, and institutional context over years of reviewing code. When they leave, that knowledge leaves with them.
@@ -168,6 +181,8 @@ The system has three layers connected through a shared memory adapter:
 **Ingest pipelines** populate the memory store from institutional artifacts. **Review pipeline** uses the same store to retrieve, judge, and post lessons. **Serve** exposes both the store and past reviews as a JSON API plus dashboard for human operators.
 
 ## Screenshots
+
+![Challenge Demo Preview](docs/challenge-demo/demo-preview.gif)
 
 ![Lessons Browser Dashboard](docs/screenshots/dashboard-lessons.png)
 

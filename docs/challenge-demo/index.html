@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>remnic-codereview challenge demo</title>
+    <style>
+      :root {
+        --paper: #f6f1e7;
+        --ink: #161616;
+        --muted: #626057;
+        --line: #211f1a;
+        --green: #116b50;
+        --blue: #225f9a;
+        --red: #b5392f;
+        --gold: #c8912d;
+        --panel: #fffaf0;
+        --shadow: 10px 10px 0 #161616;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Georgia, "Times New Roman", serif;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(90deg, rgba(22, 22, 22, 0.05) 1px, transparent 1px),
+          linear-gradient(rgba(22, 22, 22, 0.04) 1px, transparent 1px),
+          var(--paper);
+        background-size: 48px 48px;
+      }
+
+      .page {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 34px;
+      }
+
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 28px;
+        align-items: start;
+        border-bottom: 3px solid var(--line);
+        padding-bottom: 24px;
+      }
+
+      .eyebrow,
+      .label {
+        font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        background: var(--green);
+        color: white;
+        border: 2px solid var(--line);
+        padding: 7px 10px;
+        margin-bottom: 14px;
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 880px;
+        font-size: clamp(48px, 7vw, 96px);
+        line-height: 0.88;
+        letter-spacing: 0;
+      }
+
+      .dek {
+        max-width: 760px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font: 20px/1.45 ui-serif, Georgia, serif;
+      }
+
+      .stamp {
+        width: 220px;
+        border: 3px solid var(--line);
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        padding: 16px;
+        transform: rotate(1deg);
+      }
+
+      .stamp strong {
+        display: block;
+        font: 800 32px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        margin-top: 8px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+
+      .two {
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      }
+
+      .three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      section {
+        padding: 28px 0;
+      }
+
+      .card {
+        border: 3px solid var(--line);
+        background: var(--panel);
+        padding: 18px;
+        box-shadow: 7px 7px 0 #161616;
+      }
+
+      .card h2,
+      .card h3 {
+        margin: 0 0 12px;
+      }
+
+      .card h2 {
+        font-size: 34px;
+        line-height: 1;
+      }
+
+      .card h3 {
+        font-size: 22px;
+        line-height: 1.05;
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.48;
+      }
+
+      .mono,
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .pipeline {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .step {
+        min-height: 126px;
+        border: 2px solid var(--line);
+        background: white;
+        padding: 12px;
+      }
+
+      .step b {
+        display: block;
+        margin-bottom: 8px;
+        font: 800 13px/1.1 ui-monospace, SFMono-Regular, Menlo, monospace;
+        color: var(--blue);
+      }
+
+      .terminal {
+        border: 3px solid var(--line);
+        background: #111;
+        color: #f5f0e4;
+        padding: 18px;
+        min-height: 290px;
+        font: 15px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        overflow: hidden;
+      }
+
+      .terminal .ok {
+        color: #7fe0ad;
+      }
+
+      .terminal .warn {
+        color: #ffd27a;
+      }
+
+      .comment {
+        background: white;
+        border: 3px solid var(--line);
+        padding: 18px;
+      }
+
+      .comment .path {
+        color: var(--blue);
+        font-weight: 800;
+      }
+
+      .citation {
+        margin-top: 14px;
+        border: 2px dashed var(--green);
+        background: #eef8ef;
+        padding: 12px;
+        color: #164b38;
+        font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .metric {
+        display: flex;
+        min-height: 118px;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .metric strong {
+        font: 900 42px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .metric span {
+        color: var(--muted);
+      }
+
+      .proof-list {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .proof-list li {
+        border: 2px solid var(--line);
+        background: white;
+        padding: 10px 12px;
+        font: 15px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .proof-list li::before {
+        content: "PASS";
+        display: inline-block;
+        margin-right: 10px;
+        color: white;
+        background: var(--green);
+        padding: 2px 6px;
+      }
+
+      .visual {
+        min-height: 320px;
+        display: grid;
+        align-items: center;
+      }
+
+      .memory-card {
+        border: 3px solid var(--line);
+        background: #fefefe;
+        padding: 16px;
+        transform: rotate(-1deg);
+      }
+
+      .memory-card + .memory-card {
+        margin-top: -8px;
+        margin-left: 32px;
+        transform: rotate(1.5deg);
+      }
+
+      .tag {
+        display: inline-block;
+        border: 2px solid var(--line);
+        background: #f0d47a;
+        padding: 4px 7px;
+        margin: 4px 4px 0 0;
+        font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .scene-focus .page > * {
+        display: none;
+      }
+
+      .scene-focus[data-scene="system"] #system,
+      .scene-focus[data-scene="review"] #review,
+      .scene-focus[data-scene="proof"] #proof,
+      .scene-focus[data-scene="webhook"] #webhook {
+        display: block;
+        padding-top: 42px;
+      }
+
+      .scene-focus[data-scene="hero"] header {
+        display: grid;
+      }
+
+      .scene-focus[data-scene="hero"] .page > header {
+        margin-top: 80px;
+      }
+
+      footer {
+        border-top: 3px solid var(--line);
+        padding: 20px 0 0;
+        color: var(--muted);
+      }
+
+      @media (max-width: 860px) {
+        .page {
+          padding: 22px;
+        }
+
+        header,
+        .two,
+        .three,
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+
+        .stamp {
+          width: auto;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header id="hero">
+        <div>
+          <span class="eyebrow">OpenAI DEV Challenge: Build a System, Not a Prompt</span>
+          <h1>Code review with a memory of every lesson your team already learned.</h1>
+          <p class="dek">
+            `remnic-codereview` ingests PR reviews, rules docs, post-mortems, ADRs,
+            issues, and fix commits. Then it reviews future PRs against those
+            memories and cites the original incident inline.
+          </p>
+        </div>
+        <aside class="stamp">
+          <span class="label">System proof</span>
+          <strong>367</strong>
+          <p>automated tests, plus a deterministic end-to-end dogfood demo.</p>
+        </aside>
+      </header>
+
+      <section id="system">
+        <div class="grid two">
+          <article class="card">
+            <span class="label">System architecture</span>
+            <h2>State, retrieval, judgment, and GitHub side effects.</h2>
+            <div class="pipeline">
+              <div class="step"><b>01 Ingest</b>Rules, PR reviews, issues, ADRs, post-mortems, fix commits.</div>
+              <div class="step"><b>02 Store</b>Structured lessons with provenance in a Remnic memory store.</div>
+              <div class="step"><b>03 Recall</b>Retrieve lessons by diff hunk, path, tags, and meaning.</div>
+              <div class="step"><b>04 Judge</b>OpenAI decides whether the lesson truly applies.</div>
+              <div class="step"><b>05 Comment</b>Post inline review comments with citation blocks.</div>
+            </div>
+          </article>
+          <aside class="visual">
+            <div class="memory-card">
+              <strong>Lesson: Guard slice(-n)</strong>
+              <p>`slice(-0)` equals `slice(0)`, so a zero limit returns all entries.</p>
+              <span class="tag">rules_doc</span><span class="tag">high</span><span class="tag">javascript</span>
+            </div>
+            <div class="memory-card">
+              <strong>Source</strong>
+              <p>Original PR review or rule doc, stored as a durable citation.</p>
+              <span class="tag">oai-mem-citation</span>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="review">
+        <div class="grid two">
+          <article class="terminal">
+            <div>$ node dist/cli.js ingest --all joshuaswarren/remnic</div>
+            <div class="ok">21 rules lessons added</div>
+            <div class="ok">8 history lessons added</div>
+            <br />
+            <div>$ node dist/cli.js review joshuaswarren/remnic 99999 --dry-run</div>
+            <div class="ok">Found 2 hunk(s) in planted-bug diff</div>
+            <div class="ok">Review summary: 3 comment(s) across 2 hunk(s)</div>
+            <div class="warn">Cited lesson: les_pattern27_slice_guard</div>
+          </article>
+          <article class="comment">
+            <div class="path">src/storage.ts:45</div>
+            <h3>Guard slice(-n) against n === 0 - Pattern #27</h3>
+            <p>
+              This hunk calls `items.slice(-n)`. If `n` is zero, JavaScript returns
+              the entire array. Add an explicit positive guard before slicing.
+            </p>
+            <pre class="citation">&lt;oai-mem-citation&gt;
+  &lt;field name="lesson_id"&gt;les_pattern27_slice_guard&lt;/field&gt;
+  &lt;field name="source_kind"&gt;rules_doc&lt;/field&gt;
+  &lt;field name="confidence"&gt;0.80&lt;/field&gt;
+&lt;/oai-mem-citation&gt;</pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="webhook">
+        <div class="grid two">
+          <article class="card">
+            <span class="label">Incremental learning</span>
+            <h2>New merged PRs become tomorrow's review memory.</h2>
+            <p>
+              The server exposes `POST /api/webhooks/github`. A GitHub
+              `pull_request` closed event for a merged PR triggers PR-review
+              ingestion for that one PR, so the memory store keeps growing.
+            </p>
+            <ul class="proof-list">
+              <li>Ignores unmerged or unsupported events</li>
+              <li>Fetches the merged PR review surfaces</li>
+              <li>Stores new lessons in the configured memory dir</li>
+            </ul>
+          </article>
+          <article class="terminal">
+            <div>POST /api/webhooks/github</div>
+            <div>{ "action": "closed", "pull_request": { "merged": true } }</div>
+            <br />
+            <div class="ok">200 OK</div>
+            <div>{ "status": "ok", "pr_number": 42 }</div>
+            <div class="ok">stats.lessons_added &gt;= 1</div>
+          </article>
+        </div>
+      </section>
+
+      <section id="proof">
+        <div class="grid three">
+          <article class="card metric">
+            <span class="label">Automated proof</span>
+            <strong>367</strong>
+            <span>tests pass from a clean clone</span>
+          </article>
+          <article class="card metric">
+            <span class="label">System depth</span>
+            <strong>7</strong>
+            <span>major subsystems: ingest, memory, recall, judge, compose, post, dashboard</span>
+          </article>
+          <article class="card metric">
+            <span class="label">Demo result</span>
+            <strong>3</strong>
+            <span>citation-backed comments on the planted bug</span>
+          </article>
+        </div>
+        <div class="card" style="margin-top: 18px">
+          <h2>Why this is not just a prompt</h2>
+          <p>
+            Prompts do not keep a durable lesson ledger, remember source
+            provenance, incrementally learn from merged PRs, or attach
+            line-level GitHub comments after a retrieval and judgment pipeline.
+            This is a memory system wrapped around a practical developer workflow.
+          </p>
+        </div>
+      </section>
+
+      <footer>
+        Public repo: https://github.com/joshuaswarren/remnic-codereview
+      </footer>
+    </main>
+    <script>
+      const scene = new URLSearchParams(window.location.search).get("scene");
+      if (scene) {
+        document.body.classList.add("scene-focus");
+        document.body.dataset.scene = scene;
+      }
+    </script>
+  </body>
+</html>

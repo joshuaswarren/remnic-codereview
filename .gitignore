@@ -17,6 +17,7 @@ tests/fixtures/history-corpus/.git/
 
 # Build artifacts
 admin-console/dist/
+docs/challenge-demo/frames/
 
 # OS files
 .DS_Store
